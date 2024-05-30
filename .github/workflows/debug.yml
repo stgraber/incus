@@ -1,0 +1,29 @@
+name: Debug
+on:
+  - push
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install incus
+        run: |
+          curl https://pkgs.zabbly.com/get/incus-stable | sudo sh -x
+
+      - name: Reset the firewall
+        run: |
+          sudo nft flush ruleset
+
+      - name: Init incus
+        run: sudo incus admin init --auto
+
+      - name: Launch an arch container
+        run: sudo incus launch images:almalinux/8 al8
+
+      - name: Update the package list
+        run: |
+          sleep 10
+          sudo incus exec al8 -- dnf update
