@@ -248,6 +248,16 @@ func (c *Config) OpenFGA() (apiURL string, apiToken string, storeID string) {
 	return c.m.GetString("openfga.api.url"), c.m.GetString("openfga.api.token"), c.m.GetString("openfga.store.id")
 }
 
+// StorageBackupsBucket returns the remote bucket URL to use for storing backup tarballs.
+func (c *Config) StorageBackupsBucket() string {
+	return c.m.GetString("storage.backups_bucket")
+}
+
+// StorageImagesBucket returns the remote bucket URL to use for storing image tarballs.
+func (c *Config) StorageImagesBucket() string {
+	return c.m.GetString("storage.images_bucket")
+}
+
 // Dump current configuration keys and their values. Keys with values matching
 // their defaults are omitted.
 func (c *Config) Dump() map[string]string {
@@ -761,6 +771,28 @@ var ConfigSchema = config.Schema{
 	//  defaultdesc: Content of `/etc/ovn/key_host` if present
 	//  shortdesc: OVN SSL client key
 	"network.ovn.client_key": {Default: ""},
+
+	// gendoc:generate(entity=server, group=miscellaneous, key=storage.backups_bucket)
+	// Specify the object storage bucket to use for backup storage.
+	// Currently supported syntax is `s3+https://USER:KEY@SERVER:PORT/BUCKET`
+	//
+	// This configuration key conflicts with the local `storage.backups_volume` key.
+	// ---
+	//  type: string
+	//  scope: global
+	//  shortdesc: Bucket to use to store backup tarballs
+	"storage.backups_bucket": {},
+
+	// gendoc:generate(entity=server, group=miscellaneous, key=storage.images_bucket)
+	// Specify the object storage bucket to use for image storage.
+	// Currently supported syntax is `s3+https://USER:KEY@SERVER:PORT/BUCKET`
+	//
+	// This configuration key conflicts with the local `storage.images_volume` key.
+	// ---
+	//  type: string
+	//  scope: global
+	//  shortdesc: Bucket to use to store the image tarballs
+	"storage.images_bucket": {},
 }
 
 func expiryValidator(value string) error {
