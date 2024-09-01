@@ -266,6 +266,7 @@ var ConfigSchema = config.Schema{
 	//  scope: local
 	//  shortdesc: Volume to use to store backup tarballs
 	"storage.backups_volume": {},
+
 	// gendoc:generate(entity=server, group=miscellaneous, key=storage.images_volume)
 	// Specify the volume using the syntax `POOL/VOLUME`.
 	// ---
