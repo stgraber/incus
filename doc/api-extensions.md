@@ -2593,6 +2593,7 @@ This introduces a new `boot.autorestart` configuration key which when
 set to `true` will have the instance automatically be restarted upon
 unexpected exit for up to 10 times over a 1 minute period.
 
+<<<<<<< HEAD
 ## `storage_lvm_metadatasize`
 
 This introduces a new `lvm.metadata_size` option for LVM storage pools
@@ -2610,3 +2611,14 @@ This adds `none` as a value for `ipv4.address` and `ipv6.address` for OVN NICs.
 ## `instances_state_os_info`
 
 This extension adds a pointer to an `InstanceStateOSInfo` struct to the instance's state API.
+
+## `server_buckets_images_backups`
+
+This adds two new server configuration keys:
+* `storage.backups_bucket`
+* `storage.images_bucket`
+
+Those are equivalents to the existing `storage.backups_volume` and `storage_images_volume` but using a remote object storage bucket instead.
+
+Currently this supports the following syntax `s3+https://user:key@domain:port/bucket`.
+`user` is currently not relevant and so is ignored.

@@ -443,6 +443,7 @@ var APIExtensions = []string{
 	"ovn_nic_promiscuous",
 	"ovn_nic_ip_address_none",
 	"instances_state_os_info",
+	"server_buckets_images_backups",
 }
 
 // APIExtensionsCount returns the number of available API extensions.
