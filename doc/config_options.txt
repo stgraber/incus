@@ -2472,11 +2472,31 @@ See {ref}`clustering-instance-placement-scriptlet` for more information.
 
 ```
 
+```{config:option} storage.backups_bucket server-miscellaneous
+:scope: "global"
+:shortdesc: "Bucket to use to store backup tarballs"
+:type: "string"
+Specify the object storage bucket to use for backup storage.
+Currently supported syntax is `s3+https://USER:KEY@SERVER:PORT/BUCKET`
+
+This configuration key conflicts with the local `storage.backups_volume` key.
+```
+
 ```{config:option} storage.backups_volume server-miscellaneous
 :scope: "local"
 :shortdesc: "Volume to use to store backup tarballs"
 :type: "string"
 Specify the volume using the syntax `POOL/VOLUME`.
+```
+
+```{config:option} storage.images_bucket server-miscellaneous
+:scope: "global"
+:shortdesc: "Bucket to use to store the image tarballs"
+:type: "string"
+Specify the object storage bucket to use for image storage.
+Currently supported syntax is `s3+https://USER:KEY@SERVER:PORT/BUCKET`
+
+This configuration key conflicts with the local `storage.images_volume` key.
 ```
 
 ```{config:option} storage.images_volume server-miscellaneous

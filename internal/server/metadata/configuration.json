@@ -2727,10 +2727,26 @@
 						}
 					},
 					{
+						"storage.backups_bucket": {
+							"longdesc": "Specify the object storage bucket to use for backup storage.\nCurrently supported syntax is `s3+https://USER:KEY@SERVER:PORT/BUCKET`\n\nThis configuration key conflicts with the local `storage.backups_volume` key.",
+							"scope": "global",
+							"shortdesc": "Bucket to use to store backup tarballs",
+							"type": "string"
+						}
+					},
+					{
 						"storage.backups_volume": {
 							"longdesc": "Specify the volume using the syntax `POOL/VOLUME`.",
 							"scope": "local",
 							"shortdesc": "Volume to use to store backup tarballs",
+							"type": "string"
+						}
+					},
+					{
+						"storage.images_bucket": {
+							"longdesc": "Specify the object storage bucket to use for image storage.\nCurrently supported syntax is `s3+https://USER:KEY@SERVER:PORT/BUCKET`\n\nThis configuration key conflicts with the local `storage.images_volume` key.",
+							"scope": "global",
+							"shortdesc": "Bucket to use to store the image tarballs",
 							"type": "string"
 						}
 					},
