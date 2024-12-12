@@ -25,6 +25,7 @@ import (
 	"github.com/lxc/incus/v6/shared/ioprogress"
 	"github.com/lxc/incus/v6/shared/logger"
 	"github.com/lxc/incus/v6/shared/revert"
+	"github.com/lxc/incus/v6/shared/subprocess"
 	"github.com/lxc/incus/v6/shared/util"
 )
 
@@ -331,6 +332,36 @@ func genericVFSCreateVolumeFromMigration(d Driver, initVolume func(vol Volume) (
 		}
 
 		defer func() { _ = to.Close() }()
+
+		st, err := to.Stat()
+		if err != nil {
+			return err
+		}
+
+		if linux.IsBlockdev(st.Mode()) {
+			// If dealing with a block device, discard its current content.
+			// This saves space and avoids issues with leaving zero blocks to their original value.
+			_, err = subprocess.RunCommand("blkdiscard", path)
+			if err != nil {
+				return err
+			}
+		} else {
+			// Otherwise truncate the file.
+			err = to.Truncate(0)
+			if err != nil {
+				return err
+			}
+
+			err = to.Truncate(st.Size())
+			if err != nil {
+				return err
+			}
+
+			_, err = to.Seek(0, 0)
+			if err != nil {
+				return err
+			}
+		}
 
 		// Setup progress tracker.
 		fromPipe := io.ReadCloser(conn)
@@ -785,6 +816,36 @@ func genericVFSBackupUnpack(d Driver, sysOS *sys.OS, vol Volume, snapshots []str
 					logMsg := "Unpacking virtual machine block volume"
 					if vol.volType == VolumeTypeCustom {
 						logMsg = "Unpacking custom block volume"
+					}
+
+					st, err := to.Stat()
+					if err != nil {
+						return err
+					}
+
+					if linux.IsBlockdev(st.Mode()) {
+						// If dealing with a block device, discard its current content.
+						// This saves space and avoids issues with leaving zero blocks to their original value.
+						_, err = subprocess.RunCommand("blkdiscard", targetPath)
+						if err != nil {
+							return err
+						}
+					} else {
+						// Otherwise truncate the file.
+						err = to.Truncate(0)
+						if err != nil {
+							return err
+						}
+
+						err = to.Truncate(st.Size())
+						if err != nil {
+							return err
+						}
+
+						_, err = to.Seek(0, 0)
+						if err != nil {
+							return err
+						}
 					}
 
 					d.Logger().Debug(logMsg, logger.Ctx{"source": srcFile, "target": targetPath})
