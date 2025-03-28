@@ -2693,7 +2693,7 @@ func (r *ProtocolIncus) ConsoleInstanceDynamic(instanceName string, console api.
 // GetInstanceConsoleLog requests that Incus attaches to the console device of a instance.
 //
 // Note that it's the caller's responsibility to close the returned ReadCloser.
-func (r *ProtocolIncus) GetInstanceConsoleLog(instanceName string, args *InstanceConsoleLogArgs) (io.ReadCloser, error) {
+func (r *ProtocolIncus) GetInstanceConsoleLog(instanceName string, _ *InstanceConsoleLogArgs) (io.ReadCloser, error) {
 	path, _, err := r.instanceTypeToPath(api.InstanceTypeAny)
 	if err != nil {
 		return nil, err
@@ -2734,7 +2734,7 @@ func (r *ProtocolIncus) GetInstanceConsoleLog(instanceName string, args *Instanc
 }
 
 // DeleteInstanceConsoleLog deletes the requested instance's console log.
-func (r *ProtocolIncus) DeleteInstanceConsoleLog(instanceName string, args *InstanceConsoleLogArgs) error {
+func (r *ProtocolIncus) DeleteInstanceConsoleLog(instanceName string, _ *InstanceConsoleLogArgs) error {
 	path, _, err := r.instanceTypeToPath(api.InstanceTypeAny)
 	if err != nil {
 		return err

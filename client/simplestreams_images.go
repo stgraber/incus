@@ -49,7 +49,7 @@ func (r *ProtocolSimpleStreams) GetImageFingerprints() ([]string, error) {
 }
 
 // GetImagesWithFilter returns a filtered list of available images as Image structs.
-func (r *ProtocolSimpleStreams) GetImagesWithFilter(filters []string) ([]api.Image, error) {
+func (r *ProtocolSimpleStreams) GetImagesWithFilter(_ []string) ([]api.Image, error) {
 	return nil, fmt.Errorf("GetImagesWithFilter is not supported by the simplestreams protocol")
 }
 
@@ -229,17 +229,17 @@ func (r *ProtocolSimpleStreams) GetImageFile(fingerprint string, req ImageFileRe
 }
 
 // GetImageSecret isn't relevant for the simplestreams protocol.
-func (r *ProtocolSimpleStreams) GetImageSecret(fingerprint string) (string, error) {
+func (r *ProtocolSimpleStreams) GetImageSecret(_ string) (string, error) {
 	return "", fmt.Errorf("Private images aren't supported by the simplestreams protocol")
 }
 
 // GetPrivateImage isn't relevant for the simplestreams protocol.
-func (r *ProtocolSimpleStreams) GetPrivateImage(fingerprint string, secret string) (*api.Image, string, error) {
+func (r *ProtocolSimpleStreams) GetPrivateImage(_ string, _ string) (*api.Image, string, error) {
 	return nil, "", fmt.Errorf("Private images aren't supported by the simplestreams protocol")
 }
 
 // GetPrivateImageFile isn't relevant for the simplestreams protocol.
-func (r *ProtocolSimpleStreams) GetPrivateImageFile(fingerprint string, secret string, req ImageFileRequest) (*ImageFileResponse, error) {
+func (r *ProtocolSimpleStreams) GetPrivateImageFile(_ string, _ string, _ ImageFileRequest) (*ImageFileResponse, error) {
 	return nil, fmt.Errorf("Private images aren't supported by the simplestreams protocol")
 }
 
@@ -310,6 +310,6 @@ func (r *ProtocolSimpleStreams) GetImageAliasArchitectures(imageType string, nam
 }
 
 // ExportImage exports (copies) an image to a remote server.
-func (r *ProtocolSimpleStreams) ExportImage(fingerprint string, image api.ImageExportPost) (Operation, error) {
+func (r *ProtocolSimpleStreams) ExportImage(_ string, _ api.ImageExportPost) (Operation, error) {
 	return nil, fmt.Errorf("Exporting images is not supported by the simplestreams protocol")
 }
