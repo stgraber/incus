@@ -35,7 +35,7 @@ func (c *cmdAdminWaitready) Command() *cobra.Command {
 	return cmd
 }
 
-func (c *cmdAdminWaitready) Run(cmd *cobra.Command, args []string) error {
+func (c *cmdAdminWaitready) Run(_ *cobra.Command, _ []string) error {
 	finger := make(chan error, 1)
 	var errLast error
 	go func() {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -107,7 +108,7 @@ func (c *cmdCluster) Command() *cobra.Command {
 
 	// Workaround for subcommand usage errors. See: https://github.com/spf13/cobra/issues/706
 	cmd.Args = cobra.NoArgs
-	cmd.Run = func(cmd *cobra.Command, args []string) { _ = cmd.Usage() }
+	cmd.Run = func(cmd *cobra.Command, _ []string) { _ = cmd.Usage() }
 
 	return cmd
 }
@@ -151,13 +152,13 @@ func (c *cmdClusterList) Command() *cobra.Command {
 	cmd.Flags().StringVarP(&c.flagFormat, "format", "f", "table", i18n.G(`Format (csv|json|table|yaml|compact), use suffix ",noheader" to disable headers and ",header" to enable it if missing, e.g. csv,header`)+"``")
 	cmd.Flags().BoolVar(&c.flagAllProjects, "all-projects", false, i18n.G("Display clusters from all projects"))
 
-	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	cmd.PreRunE = func(cmd *cobra.Command, _ []string) error {
 		return cli.ValidateFlagFormatForListOutput(cmd.Flag("format").Value.String())
 	}
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpRemotes(toComplete, false)
 		}
@@ -250,7 +251,7 @@ func (c *cmdClusterList) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if c.global.flagProject != "" && c.flagAllProjects {
-		return fmt.Errorf(i18n.G("Can't specify --project with --all-projects"))
+		return errors.New(i18n.G("Can't specify --project with --all-projects"))
 	}
 
 	// Parse remote
@@ -273,7 +274,7 @@ func (c *cmdClusterList) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if !cluster.Enabled {
-		return fmt.Errorf(i18n.G("Server isn't part of a cluster"))
+		return errors.New(i18n.G("Server isn't part of a cluster"))
 	}
 
 	// Get the cluster members
@@ -324,7 +325,7 @@ func (c *cmdClusterShow) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpClusterMembers(toComplete)
 		}
@@ -381,7 +382,7 @@ func (c *cmdClusterInfo) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpClusterMembers(toComplete)
 		}
@@ -440,7 +441,7 @@ func (c *cmdClusterGet) Command() *cobra.Command {
 	cmd.Flags().BoolVarP(&c.flagIsProperty, "property", "p", false, i18n.G("Get the key as a cluster property"))
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpClusterMembers(toComplete)
 		}
@@ -478,7 +479,7 @@ func (c *cmdClusterGet) Run(cmd *cobra.Command, args []string) error {
 
 	if c.flagIsProperty {
 		w := member.Writable()
-		res, err := getFieldByJsonTag(&w, args[1])
+		res, err := getFieldByJSONTag(&w, args[1])
 		if err != nil {
 			return fmt.Errorf(i18n.G("The property %q does not exist on the cluster member %q: %v"), args[1], resource.name, err)
 		}
@@ -513,7 +514,7 @@ func (c *cmdClusterSet) Command() *cobra.Command {
 	cmd.Flags().BoolVarP(&c.flagIsProperty, "property", "p", false, i18n.G("Set the key as a cluster property"))
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpClusterMembers(toComplete)
 		}
@@ -555,7 +556,7 @@ func (c *cmdClusterSet) Run(cmd *cobra.Command, args []string) error {
 	if c.flagIsProperty {
 		if cmd.Name() == "unset" {
 			for k := range keys {
-				err := unsetFieldByJsonTag(&writable, k)
+				err := unsetFieldByJSONTag(&writable, k)
 				if err != nil {
 					return fmt.Errorf(i18n.G("Error unsetting property: %v"), err)
 				}
@@ -593,7 +594,7 @@ func (c *cmdClusterUnset) Command() *cobra.Command {
 	cmd.Flags().BoolVarP(&c.flagIsProperty, "property", "p", false, i18n.G("Unset the key as a cluster property"))
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpClusterMembers(toComplete)
 		}
@@ -637,7 +638,7 @@ func (c *cmdClusterRename) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpClusterMembers(toComplete)
 		}
@@ -697,7 +698,7 @@ func (c *cmdClusterRemove) Command() *cobra.Command {
 	cmd.Flags().BoolVarP(&c.flagForce, "force", "f", false, i18n.G("Force removing a member, even if degraded"))
 	cmd.Flags().BoolVar(&c.flagNonInteractive, "yes", false, i18n.G("Don't require user confirmation for using --force"))
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpClusterMembers(toComplete)
 		}
@@ -729,7 +730,7 @@ Are you really sure you want to force removing %s? (yes/no): `), name)
 	input = strings.TrimSuffix(input, "\n")
 
 	if !slices.Contains([]string{i18n.G("yes")}, strings.ToLower(input)) {
-		return fmt.Errorf(i18n.G("User aborted delete operation"))
+		return errors.New(i18n.G("User aborted delete operation"))
 	}
 
 	return nil
@@ -793,7 +794,7 @@ func (c *cmdClusterEnable) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpRemotes(toComplete, false)
 		}
@@ -833,7 +834,7 @@ func (c *cmdClusterEnable) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if server.Config["core.https_address"] == "" && server.Config["cluster.https_address"] == "" {
-		return fmt.Errorf(i18n.G("This server is not available on the network"))
+		return errors.New(i18n.G("This server is not available on the network"))
 	}
 
 	// Check if already enabled
@@ -843,7 +844,7 @@ func (c *cmdClusterEnable) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if currentCluster.Enabled {
-		return fmt.Errorf(i18n.G("This server is already clustered"))
+		return errors.New(i18n.G("This server is already clustered"))
 	}
 
 	// Enable clustering.
@@ -882,7 +883,7 @@ func (c *cmdClusterEdit) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpClusterMembers(toComplete)
 		}
@@ -915,7 +916,7 @@ func (c *cmdClusterEdit) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing cluster member name"))
+		return errors.New(i18n.G("Missing cluster member name"))
 	}
 
 	// If stdin isn't a terminal, read text from it
@@ -999,7 +1000,7 @@ func (c *cmdClusterAdd) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpClusterMembers(toComplete)
 		}
@@ -1027,7 +1028,7 @@ func (c *cmdClusterAdd) Run(cmd *cobra.Command, args []string) error {
 
 	// Determine the machine name.
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("A cluster member name must be provided"))
+		return errors.New(i18n.G("A cluster member name must be provided"))
 	}
 
 	// Request the join token.
@@ -1097,7 +1098,7 @@ Pre-defined column shorthand chars:
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpRemotes(toComplete, false)
 		}
@@ -1177,7 +1178,7 @@ func (c *cmdClusterListTokens) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if !cluster.Enabled {
-		return fmt.Errorf(i18n.G("Server isn't part of a cluster"))
+		return errors.New(i18n.G("Server isn't part of a cluster"))
 	}
 
 	// Get the cluster member join tokens. Use default project as join tokens are created in default project.
@@ -1242,7 +1243,7 @@ func (c *cmdClusterRevokeToken) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpClusterMembers(toComplete)
 		}
@@ -1274,7 +1275,7 @@ func (c *cmdClusterRevokeToken) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if !cluster.Enabled {
-		return fmt.Errorf(i18n.G("Server isn't part of a cluster"))
+		return errors.New(i18n.G("Server isn't part of a cluster"))
 	}
 
 	// Get the cluster member join tokens. Use default project as join tokens are created in default project.
@@ -1331,7 +1332,7 @@ func (c *cmdClusterUpdateCertificate) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpClusterMembers(toComplete)
 		}
@@ -1382,7 +1383,7 @@ func (c *cmdClusterUpdateCertificate) Run(cmd *cobra.Command, args []string) err
 	}
 
 	if !cluster.Enabled {
-		return fmt.Errorf(i18n.G("Server isn't part of a cluster"))
+		return errors.New(i18n.G("Server isn't part of a cluster"))
 	}
 
 	if !util.PathExists(certFile) {
@@ -1446,7 +1447,7 @@ func (c *cmdClusterEvacuate) Command() *cobra.Command {
 	cmdAction := cmdClusterEvacuateAction{global: c.global}
 	c.action = &cmdAction
 
-	cmd := c.action.Command("evacuate")
+	cmd := c.action.Command()
 	cmd.Aliases = []string{"evac"}
 	cmd.Use = usage("evacuate", i18n.G("[<remote>:]<member>"))
 	cmd.Short = i18n.G("Evacuate cluster member")
@@ -1454,7 +1455,7 @@ func (c *cmdClusterEvacuate) Command() *cobra.Command {
 
 	cmd.Flags().StringVar(&c.action.flagAction, "action", "", i18n.G(`Force a particular evacuation action`)+"``")
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpClusterMembers(toComplete)
 		}
@@ -1476,12 +1477,12 @@ func (c *cmdClusterRestore) Command() *cobra.Command {
 	cmdAction := cmdClusterEvacuateAction{global: c.global}
 	c.action = &cmdAction
 
-	cmd := c.action.Command("restore")
+	cmd := c.action.Command()
 	cmd.Use = usage("restore", i18n.G("[<remote>:]<member>"))
 	cmd.Short = i18n.G("Restore cluster member")
 	cmd.Long = cli.FormatSection(i18n.G("Description"), i18n.G(`Restore cluster member`))
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpClusterMembers(toComplete)
 		}
@@ -1492,7 +1493,7 @@ func (c *cmdClusterRestore) Command() *cobra.Command {
 	return cmd
 }
 
-func (c *cmdClusterEvacuateAction) Command(action string) *cobra.Command {
+func (c *cmdClusterEvacuateAction) Command() *cobra.Command {
 	cmd := &cobra.Command{}
 	cmd.RunE = c.Run
 	cmd.Flags().BoolVar(&c.flagForce, "force", false, i18n.G(`Force evacuation without user confirmation`)+"``")
@@ -1516,7 +1517,7 @@ func (c *cmdClusterEvacuateAction) Run(cmd *cobra.Command, args []string) error 
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing cluster member name"))
+		return errors.New(i18n.G("Missing cluster member name"))
 	}
 
 	if !c.flagForce {

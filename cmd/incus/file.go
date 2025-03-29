@@ -84,7 +84,7 @@ func (c *cmdFile) Command() *cobra.Command {
 
 	// Workaround for subcommand usage errors. See: https://github.com/spf13/cobra/issues/706
 	cmd.Args = cobra.NoArgs
-	cmd.Run = func(cmd *cobra.Command, args []string) { _ = cmd.Usage() }
+	cmd.Run = func(cmd *cobra.Command, _ []string) { _ = cmd.Usage() }
 	return cmd
 }
 
@@ -119,7 +119,7 @@ incus file create --type=symlink foo/bar baz
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpFiles(toComplete, false)
 		}
@@ -143,7 +143,7 @@ func (c *cmdFileCreate) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(args) == 2 && c.flagType != "symlink" {
-		return fmt.Errorf(i18n.G(`Symlink target path can only be used for type "symlink"`))
+		return errors.New(i18n.G(`Symlink target path can only be used for type "symlink"`))
 	}
 
 	if strings.HasSuffix(args[0], "/") {
@@ -306,7 +306,7 @@ func (c *cmdFileDelete) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return c.global.cmpFiles(toComplete, false)
 	}
 
@@ -386,7 +386,7 @@ func (c *cmdFileEdit) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpFiles(toComplete, false)
 		}
@@ -470,7 +470,7 @@ func (c *cmdFilePull) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpFiles(toComplete, false)
 		}
@@ -510,7 +510,7 @@ func (c *cmdFilePull) Run(cmd *cobra.Command, args []string) error {
 	if err == nil {
 		targetIsDir = targetInfo.IsDir()
 		if !targetIsDir && len(args)-1 > 1 {
-			return fmt.Errorf(i18n.G("More than one file to download, but target is not a directory"))
+			return errors.New(i18n.G("More than one file to download, but target is not a directory"))
 		}
 	} else if strings.HasSuffix(args[len(args)-1], string(os.PathSeparator)) || len(args)-1 > 1 {
 		err := os.MkdirAll(target, DirMode)
@@ -593,9 +593,9 @@ func (c *cmdFilePull) Run(cmd *cobra.Command, args []string) error {
 				}
 
 				continue
-			} else {
-				return fmt.Errorf(i18n.G("Can't pull a directory without --recursive"))
 			}
+
+			return errors.New(i18n.G("Can't pull a directory without --recursive"))
 		}
 
 		var targetPath string
@@ -705,7 +705,7 @@ func (c *cmdFilePush) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return nil, cobra.ShellCompDirectiveDefault
 		}
@@ -783,7 +783,7 @@ func (c *cmdFilePush) Run(cmd *cobra.Command, args []string) error {
 	if c.file.flagRecursive {
 		// Quick checks.
 		if c.file.flagUID != -1 || c.file.flagGID != -1 || c.file.flagMode != "" {
-			return fmt.Errorf(i18n.G("Can't supply uid/gid/mode in recursive mode"))
+			return errors.New(i18n.G("Can't supply uid/gid/mode in recursive mode"))
 		}
 
 		// Create needed paths if requested
@@ -831,7 +831,7 @@ func (c *cmdFilePush) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if (len(sourcefilenames) > 1) && !targetIsDir {
-		return fmt.Errorf(i18n.G("Missing target directory"))
+		return errors.New(i18n.G("Missing target directory"))
 	}
 
 	// Make sure all of the files are accessible by us before trying to push any of them
@@ -1370,7 +1370,7 @@ func (c *cmdFileMount) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpFiles(toComplete, false)
 		}
@@ -1411,13 +1411,13 @@ func (c *cmdFileMount) Run(cmd *cobra.Command, args []string) error {
 		}
 
 		if !sb.IsDir() {
-			return fmt.Errorf(i18n.G("Target path must be a directory"))
+			return errors.New(i18n.G("Target path must be a directory"))
 		}
 	}
 
 	// Check which mode we should operate in. If target path is provided we use sshfs mode.
 	if targetPath != "" && c.flagListen != "" {
-		return fmt.Errorf(i18n.G("Target path and --listen flag cannot be used together"))
+		return errors.New(i18n.G("Target path and --listen flag cannot be used together"))
 	}
 
 	instSpec := strings.SplitN(resource.name, "/", 2)
@@ -1429,7 +1429,7 @@ func (c *cmdFileMount) Run(cmd *cobra.Command, args []string) error {
 
 	// Check instance path isn't provided in listener mode.
 	if len(instSpec) > 1 && targetPath == "" {
-		return fmt.Errorf(i18n.G("Instance path cannot be used in SSH SFTP listener mode"))
+		return errors.New(i18n.G("Instance path cannot be used in SSH SFTP listener mode"))
 	}
 
 	instName := instSpec[0]
@@ -1439,7 +1439,7 @@ func (c *cmdFileMount) Run(cmd *cobra.Command, args []string) error {
 		sshfsPath, err := exec.LookPath("sshfs")
 		if err != nil {
 			// If sshfs command not found, then advise user of the --listen flag.
-			return fmt.Errorf(i18n.G("sshfs not found. Try SSH SFTP mode using the --listen flag"))
+			return errors.New(i18n.G("sshfs not found. Try SSH SFTP mode using the --listen flag"))
 		}
 
 		// Setup sourcePath with leading / to ensure we reference the instance path from / location.

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -45,7 +46,7 @@ func (c *cmdOperation) Command() *cobra.Command {
 
 	// Workaround for subcommand usage errors. See: https://github.com/spf13/cobra/issues/706
 	cmd.Args = cobra.NoArgs
-	cmd.Run = func(cmd *cobra.Command, args []string) { _ = cmd.Usage() }
+	cmd.Run = func(cmd *cobra.Command, _ []string) { _ = cmd.Usage() }
 	return cmd
 }
 
@@ -138,7 +139,7 @@ Pre-defined column shorthand chars:
 	cmd.Flags().BoolVar(&c.flagAllProjects, "all-projects", false, i18n.G("List operations from all projects")+"``")
 	cmd.Flags().StringVarP(&c.flagColumns, "columns", "c", defaultOperationColumns, i18n.G("Columns")+"``")
 
-	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	cmd.PreRunE = func(cmd *cobra.Command, _ []string) error {
 		return cli.ValidateFlagFormatForListOutput(cmd.Flag("format").Value.String())
 	}
 
@@ -238,7 +239,7 @@ func (c *cmdOperationList) Run(cmd *cobra.Command, args []string) error {
 
 	resource := resources[0]
 	if resource.name != "" {
-		return fmt.Errorf(i18n.G("Filtering isn't supported yet"))
+		return errors.New(i18n.G("Filtering isn't supported yet"))
 	}
 
 	// Get operations

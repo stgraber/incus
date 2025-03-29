@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -46,7 +47,7 @@ as well as retrieve past log entries from it.`))
 	cmd.Flags().BoolVar(&c.flagShowLog, "show-log", false, i18n.G("Retrieve the instance's console log"))
 	cmd.Flags().StringVarP(&c.flagType, "type", "t", "console", i18n.G("Type of connection to establish: 'console' for serial console, 'vga' for SPICE graphical output")+"``")
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return c.global.cmpInstances(toComplete)
 	}
 
@@ -133,7 +134,7 @@ func (c *cmdConsole) console(d incus.InstanceServer, name string) error {
 	// Show the current log if requested.
 	if c.flagShowLog {
 		if c.flagType != "console" {
-			return fmt.Errorf(i18n.G("The --show-log flag is only supported for by 'console' output type"))
+			return errors.New(i18n.G("The --show-log flag is only supported for by 'console' output type"))
 		}
 
 		console := &incus.InstanceConsoleLogArgs{}

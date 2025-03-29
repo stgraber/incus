@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -83,7 +84,7 @@ func (c *cmdStorage) Command() *cobra.Command {
 
 	// Workaround for subcommand usage errors. See: https://github.com/spf13/cobra/issues/706
 	cmd.Args = cobra.NoArgs
-	cmd.Run = func(cmd *cobra.Command, args []string) { _ = cmd.Usage() }
+	cmd.Run = func(cmd *cobra.Command, _ []string) { _ = cmd.Usage() }
 	return cmd
 }
 
@@ -112,7 +113,7 @@ incus storage create s1 dir < config.yaml
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpRemotes(toComplete, false)
 		}
@@ -135,7 +136,7 @@ func (c *cmdStorageCreate) Run(cmd *cobra.Command, args []string) error {
 	// Require a proper driver name.
 	if strings.Contains(args[1], "=") {
 		_ = cmd.Help()
-		return fmt.Errorf(i18n.G("Invalid number of arguments"))
+		return errors.New(i18n.G("Invalid number of arguments"))
 	}
 
 	// If stdin isn't a terminal, read text from it
@@ -221,7 +222,7 @@ func (c *cmdStorageDelete) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpStoragePools(toComplete)
 		}
@@ -248,7 +249,7 @@ func (c *cmdStorageDelete) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing pool name"))
+		return errors.New(i18n.G("Missing pool name"))
 	}
 
 	// Delete the pool
@@ -282,7 +283,7 @@ func (c *cmdStorageEdit) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpStoragePools(toComplete)
 		}
@@ -326,7 +327,7 @@ func (c *cmdStorageEdit) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing pool name"))
+		return errors.New(i18n.G("Missing pool name"))
 	}
 
 	// If stdin isn't a terminal, read text from it
@@ -413,7 +414,7 @@ func (c *cmdStorageGet) Command() *cobra.Command {
 	cmd.Flags().BoolVarP(&c.flagIsProperty, "property", "p", false, i18n.G("Get the key as a storage property"))
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpStoragePools(toComplete)
 		}
@@ -444,7 +445,7 @@ func (c *cmdStorageGet) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing pool name"))
+		return errors.New(i18n.G("Missing pool name"))
 	}
 
 	// If a target member was specified, we return also member-specific config values.
@@ -460,7 +461,7 @@ func (c *cmdStorageGet) Run(cmd *cobra.Command, args []string) error {
 
 	if c.flagIsProperty {
 		w := resp.Writable()
-		res, err := getFieldByJsonTag(&w, args[1])
+		res, err := getFieldByJSONTag(&w, args[1])
 		if err != nil {
 			return fmt.Errorf(i18n.G("The property %q does not exist on the storage pool %q: %v"), args[1], resource.name, err)
 		}
@@ -495,7 +496,7 @@ func (c *cmdStorageInfo) Command() *cobra.Command {
 	cmd.Flags().StringVar(&c.storage.flagTarget, "target", "", i18n.G("Cluster member name")+"``")
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpStoragePools(toComplete)
 		}
@@ -522,13 +523,13 @@ func (c *cmdStorageInfo) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing pool name"))
+		return errors.New(i18n.G("Missing pool name"))
 	}
 
 	// Targeting
 	if c.storage.flagTarget != "" {
 		if !resource.server.IsClustered() {
-			return fmt.Errorf(i18n.G("To use --target, the destination remote must be a cluster"))
+			return errors.New(i18n.G("To use --target, the destination remote must be a cluster"))
 		}
 
 		resource.server = resource.server.UseTarget(c.storage.flagTarget)
@@ -695,13 +696,13 @@ Pre-defined column shorthand chars:
 
 	cmd.Flags().StringVarP(&c.flagFormat, "format", "f", "table", i18n.G(`Format (csv|json|table|yaml|compact), use suffix ",noheader" to disable headers and ",header" to enable it if missing, e.g. csv,header`)+"``")
 
-	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	cmd.PreRunE = func(cmd *cobra.Command, _ []string) error {
 		return cli.ValidateFlagFormatForListOutput(cmd.Flag("format").Value.String())
 	}
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpRemotes(toComplete, false)
 		}
@@ -844,7 +845,7 @@ For backward compatibility, a single configuration key may still be set with:
 	cmd.Flags().BoolVarP(&c.flagIsProperty, "property", "p", false, i18n.G("Set the key as a storage property"))
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpStoragePools(toComplete)
 		}
@@ -872,7 +873,7 @@ func (c *cmdStorageSet) Run(cmd *cobra.Command, args []string) error {
 
 	resource := resources[0]
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing pool name"))
+		return errors.New(i18n.G("Missing pool name"))
 	}
 
 	client := resource.server
@@ -896,7 +897,7 @@ func (c *cmdStorageSet) Run(cmd *cobra.Command, args []string) error {
 	if c.flagIsProperty {
 		if cmd.Name() == "unset" {
 			for k := range keys {
-				err := unsetFieldByJsonTag(&writable, k)
+				err := unsetFieldByJSONTag(&writable, k)
 				if err != nil {
 					return fmt.Errorf(i18n.G("Error unsetting property: %v"), err)
 				}
@@ -945,7 +946,7 @@ func (c *cmdStorageShow) Command() *cobra.Command {
 	cmd.Flags().StringVar(&c.storage.flagTarget, "target", "", i18n.G("Cluster member name")+"``")
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpStoragePools(toComplete)
 		}
@@ -978,7 +979,7 @@ func (c *cmdStorageShow) Run(cmd *cobra.Command, args []string) error {
 	client := resource.server
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing pool name"))
+		return errors.New(i18n.G("Missing pool name"))
 	}
 
 	// If a target member was specified, we return also member-specific config values.
@@ -1039,7 +1040,7 @@ func (c *cmdStorageUnset) Command() *cobra.Command {
 	cmd.Flags().BoolVarP(&c.flagIsProperty, "property", "p", false, i18n.G("Unset the key as a storage property"))
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpStoragePools(toComplete)
 		}

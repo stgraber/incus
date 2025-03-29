@@ -90,44 +90,44 @@ type testStruct struct {
 	Age  int    `json:"age"`
 }
 
-func (s *utilsPropertiesTestSuite) TestSetFieldByJsonTagSettable() {
+func (s *utilsPropertiesTestSuite) TestSetFieldByJSONTagSettable() {
 	ts := testStruct{
 		Name: "John Doe",
 		Age:  30,
 	}
 
-	setFieldByJsonTag(&ts, "name", "Jane Doe")
+	setFieldByJSONTag(&ts, "name", "Jane Doe")
 	s.Equal("Jane Doe", ts.Name)
 }
 
-func (s *utilsPropertiesTestSuite) TestSetFieldByJsonTagNonSettable() {
+func (s *utilsPropertiesTestSuite) TestSetFieldByJSONTagNonSettable() {
 	ts := testStruct{
 		Name: "John Doe",
 		Age:  30,
 	}
 
-	setFieldByJsonTag(&ts, "invalid name", "Jane Doe")
+	setFieldByJSONTag(&ts, "invalid name", "Jane Doe")
 	s.NotEqual(ts.Name, "Jane Doe")
 }
 
-func (s *utilsPropertiesTestSuite) TestUnsetFieldByJsonTagValid() {
+func (s *utilsPropertiesTestSuite) TestUnsetFieldByJSONTagValid() {
 	ts := testStruct{
 		Name: "John Doe",
 		Age:  30,
 	}
 
-	err := unsetFieldByJsonTag(&ts, "name")
+	err := unsetFieldByJSONTag(&ts, "name")
 	s.NoError(err)
 	s.Equal("", ts.Name)
 }
 
-func (s *utilsPropertiesTestSuite) TestUnsetFieldByJsonTagInvalid() {
+func (s *utilsPropertiesTestSuite) TestUnsetFieldByJSONTagInvalid() {
 	ts := testStruct{
 		Name: "John Doe",
 		Age:  30,
 	}
 
-	err := unsetFieldByJsonTag(&ts, "invalid")
+	err := unsetFieldByJSONTag(&ts, "invalid")
 	s.Error(err, "Expected an error but got nil")
 }
 

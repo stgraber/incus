@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -126,7 +127,7 @@ func (c *cmdNetwork) Command() *cobra.Command {
 
 	// Workaround for subcommand usage errors. See: https://github.com/spf13/cobra/issues/706
 	cmd.Args = cobra.NoArgs
-	cmd.Run = func(cmd *cobra.Command, args []string) { _ = cmd.Usage() }
+	cmd.Run = func(cmd *cobra.Command, _ []string) { _ = cmd.Usage() }
 	return cmd
 }
 
@@ -145,7 +146,7 @@ func (c *cmdNetworkAttach) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpNetworks(toComplete)
 		}
@@ -176,7 +177,7 @@ func (c *cmdNetworkAttach) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing network name"))
+		return errors.New(i18n.G("Missing network name"))
 	}
 
 	// Default name is same as network
@@ -242,7 +243,7 @@ func (c *cmdNetworkAttachProfile) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpNetworks(toComplete)
 		}
@@ -273,7 +274,7 @@ func (c *cmdNetworkAttachProfile) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing network name"))
+		return errors.New(i18n.G("Missing network name"))
 	}
 
 	// Default name is same as network
@@ -352,7 +353,7 @@ incus network create bar network=baz --type ovn
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) != 0 {
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		}
@@ -457,7 +458,7 @@ func (c *cmdNetworkDelete) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) != 0 {
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		}
@@ -484,7 +485,7 @@ func (c *cmdNetworkDelete) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing network name"))
+		return errors.New(i18n.G("Missing network name"))
 	}
 
 	// Delete the network
@@ -515,7 +516,7 @@ func (c *cmdNetworkDetach) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpNetworks(toComplete)
 		}
@@ -546,7 +547,7 @@ func (c *cmdNetworkDetach) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing network name"))
+		return errors.New(i18n.G("Missing network name"))
 	}
 
 	// Default name is same as network
@@ -566,7 +567,7 @@ func (c *cmdNetworkDetach) Run(cmd *cobra.Command, args []string) error {
 		for n, d := range inst.Devices {
 			if d["type"] == "nic" && (d["parent"] == resource.name || d["network"] == resource.name) {
 				if devName != "" {
-					return fmt.Errorf(i18n.G("More than one device matches, specify the device name"))
+					return errors.New(i18n.G("More than one device matches, specify the device name"))
 				}
 
 				devName = n
@@ -575,16 +576,16 @@ func (c *cmdNetworkDetach) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if devName == "" {
-		return fmt.Errorf(i18n.G("No device found for this network"))
+		return errors.New(i18n.G("No device found for this network"))
 	}
 
 	device, ok := inst.Devices[devName]
 	if !ok {
-		return fmt.Errorf(i18n.G("The specified device doesn't exist"))
+		return errors.New(i18n.G("The specified device doesn't exist"))
 	}
 
 	if device["type"] != "nic" || (device["parent"] != resource.name && device["network"] != resource.name) {
-		return fmt.Errorf(i18n.G("The specified device doesn't match the network"))
+		return errors.New(i18n.G("The specified device doesn't match the network"))
 	}
 
 	// Remove the device
@@ -612,7 +613,7 @@ func (c *cmdNetworkDetachProfile) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpNetworks(toComplete)
 		}
@@ -643,7 +644,7 @@ func (c *cmdNetworkDetachProfile) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing network name"))
+		return errors.New(i18n.G("Missing network name"))
 	}
 
 	// Default name is same as network
@@ -663,7 +664,7 @@ func (c *cmdNetworkDetachProfile) Run(cmd *cobra.Command, args []string) error {
 		for n, d := range profile.Devices {
 			if d["type"] == "nic" && (d["parent"] == resource.name || d["network"] == resource.name) {
 				if devName != "" {
-					return fmt.Errorf(i18n.G("More than one device matches, specify the device name"))
+					return errors.New(i18n.G("More than one device matches, specify the device name"))
 				}
 
 				devName = n
@@ -672,16 +673,16 @@ func (c *cmdNetworkDetachProfile) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if devName == "" {
-		return fmt.Errorf(i18n.G("No device found for this network"))
+		return errors.New(i18n.G("No device found for this network"))
 	}
 
 	device, ok := profile.Devices[devName]
 	if !ok {
-		return fmt.Errorf(i18n.G("The specified device doesn't exist"))
+		return errors.New(i18n.G("The specified device doesn't exist"))
 	}
 
 	if device["type"] != "nic" || (device["parent"] != resource.name && device["network"] != resource.name) {
-		return fmt.Errorf(i18n.G("The specified device doesn't match the network"))
+		return errors.New(i18n.G("The specified device doesn't match the network"))
 	}
 
 	// Remove the device
@@ -709,7 +710,7 @@ func (c *cmdNetworkEdit) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) != 0 {
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		}
@@ -756,7 +757,7 @@ func (c *cmdNetworkEdit) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing network name"))
+		return errors.New(i18n.G("Missing network name"))
 	}
 
 	// If stdin isn't a terminal, read text from it
@@ -782,7 +783,7 @@ func (c *cmdNetworkEdit) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if !network.Managed {
-		return fmt.Errorf(i18n.G("Only managed networks can be modified"))
+		return errors.New(i18n.G("Only managed networks can be modified"))
 	}
 
 	data, err := yaml.Marshal(&network)
@@ -847,7 +848,7 @@ func (c *cmdNetworkGet) Command() *cobra.Command {
 	cmd.Flags().BoolVarP(&c.flagIsProperty, "property", "p", false, i18n.G("Get the key as a network property"))
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpNetworks(toComplete)
 		}
@@ -879,7 +880,7 @@ func (c *cmdNetworkGet) Run(cmd *cobra.Command, args []string) error {
 	client := resource.server
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing network name"))
+		return errors.New(i18n.G("Missing network name"))
 	}
 
 	// Get the network key
@@ -894,7 +895,7 @@ func (c *cmdNetworkGet) Run(cmd *cobra.Command, args []string) error {
 
 	if c.flagIsProperty {
 		w := resp.Writable()
-		res, err := getFieldByJsonTag(&w, args[1])
+		res, err := getFieldByJSONTag(&w, args[1])
 		if err != nil {
 			return fmt.Errorf(i18n.G("The property %q does not exist on the network %q: %v"), args[1], resource.name, err)
 		}
@@ -927,7 +928,7 @@ func (c *cmdNetworkInfo) Command() *cobra.Command {
 	cmd.Flags().StringVar(&c.network.flagTarget, "target", "", i18n.G("Cluster member name")+"``")
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) != 0 {
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		}
@@ -955,13 +956,13 @@ func (c *cmdNetworkInfo) Run(cmd *cobra.Command, args []string) error {
 	client := resource.server
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing network name"))
+		return errors.New(i18n.G("Missing network name"))
 	}
 
 	// Targeting.
 	if c.network.flagTarget != "" {
 		if !client.IsClustered() {
-			return fmt.Errorf(i18n.G("To use --target, the destination remote must be a cluster"))
+			return errors.New(i18n.G("To use --target, the destination remote must be a cluster"))
 		}
 
 		client = client.UseTarget(c.network.flagTarget)
@@ -984,7 +985,7 @@ func (c *cmdNetworkInfo) Run(cmd *cobra.Command, args []string) error {
 	fmt.Printf(i18n.G("Type: %s")+"\n", state.Type)
 
 	// IP addresses.
-	if state.Addresses != nil && len(state.Addresses) > 0 {
+	if len(state.Addresses) > 0 {
 		fmt.Println("")
 		fmt.Println(i18n.G("IP addresses:"))
 		for _, addr := range state.Addresses {
@@ -1102,13 +1103,13 @@ u - Used by (count)`))
 	cmd.Flags().StringVarP(&c.flagFormat, "format", "f", "table", i18n.G(`Format (csv|json|table|yaml|compact), use suffix ",noheader" to disable headers and ",header" to enable it if missing, e.g. csv,header`)+"``")
 	cmd.Flags().BoolVar(&c.flagAllProjects, "all-projects", false, i18n.G("List networks in all projects"))
 
-	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	cmd.PreRunE = func(cmd *cobra.Command, _ []string) error {
 		return cli.ValidateFlagFormatForListOutput(cmd.Flag("format").Value.String())
 	}
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) != 0 {
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		}
@@ -1222,7 +1223,7 @@ func (c *cmdNetworkList) Run(cmd *cobra.Command, args []string) error {
 
 	// List the networks
 	if resource.name != "" {
-		return fmt.Errorf(i18n.G("Filtering isn't supported yet"))
+		return errors.New(i18n.G("Filtering isn't supported yet"))
 	}
 
 	var networks []api.Network
@@ -1306,13 +1307,13 @@ Pre-defined column shorthand chars:
 	cmd.Flags().StringVarP(&c.flagFormat, "format", "f", "table", i18n.G(`Format (csv|json|table|yaml|compact), use suffix ",noheader" to disable headers and ",header" to enable it if missing, e.g. csv,header`)+"``")
 	cmd.Flags().StringVarP(&c.flagColumns, "columns", "c", defaultNetworkListLeasesColumns, i18n.G("Columns")+"``")
 
-	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	cmd.PreRunE = func(cmd *cobra.Command, _ []string) error {
 		return cli.ValidateFlagFormatForListOutput(cmd.Flag("format").Value.String())
 	}
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) != 0 {
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		}
@@ -1394,7 +1395,7 @@ func (c *cmdNetworkListLeases) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing network name"))
+		return errors.New(i18n.G("Missing network name"))
 	}
 
 	// List DHCP leases
@@ -1445,7 +1446,7 @@ func (c *cmdNetworkRename) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) != 0 {
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		}
@@ -1472,7 +1473,7 @@ func (c *cmdNetworkRename) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing network name"))
+		return errors.New(i18n.G("Missing network name"))
 	}
 
 	// Rename the network
@@ -1510,7 +1511,7 @@ For backward compatibility, a single configuration key may still be set with:
 	cmd.Flags().BoolVarP(&c.flagIsProperty, "property", "p", false, i18n.G("Set the key as a network property"))
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) != 0 {
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		}
@@ -1538,7 +1539,7 @@ func (c *cmdNetworkSet) Run(cmd *cobra.Command, args []string) error {
 	client := resource.server
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing network name"))
+		return errors.New(i18n.G("Missing network name"))
 	}
 
 	// Handle targeting
@@ -1553,7 +1554,7 @@ func (c *cmdNetworkSet) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if !network.Managed {
-		return fmt.Errorf(i18n.G("Only managed networks can be modified"))
+		return errors.New(i18n.G("Only managed networks can be modified"))
 	}
 
 	// Set the keys
@@ -1566,7 +1567,7 @@ func (c *cmdNetworkSet) Run(cmd *cobra.Command, args []string) error {
 	if c.flagIsProperty {
 		if cmd.Name() == "unset" {
 			for k := range keys {
-				err := unsetFieldByJsonTag(&writable, k)
+				err := unsetFieldByJSONTag(&writable, k)
 				if err != nil {
 					return fmt.Errorf(i18n.G("Error unsetting property: %v"), err)
 				}
@@ -1602,7 +1603,7 @@ func (c *cmdNetworkShow) Command() *cobra.Command {
 	cmd.Flags().StringVar(&c.network.flagTarget, "target", "", i18n.G("Cluster member name")+"``")
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) != 0 {
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		}
@@ -1630,7 +1631,7 @@ func (c *cmdNetworkShow) Run(cmd *cobra.Command, args []string) error {
 	client := resource.server
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing network name"))
+		return errors.New(i18n.G("Missing network name"))
 	}
 
 	// Show the network config
@@ -1675,7 +1676,7 @@ func (c *cmdNetworkUnset) Command() *cobra.Command {
 	cmd.Flags().BoolVarP(&c.flagIsProperty, "property", "p", false, i18n.G("Unset the key as a network property"))
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpNetworks(toComplete)
 		}

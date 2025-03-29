@@ -4,6 +4,7 @@ package main
 
 import (
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -30,7 +31,7 @@ import (
 	"github.com/lxc/incus/v6/shared/validate"
 )
 
-func (c *cmdAdminInit) RunInteractive(cmd *cobra.Command, args []string, d incus.InstanceServer, server *api.Server) (*api.InitPreseed, error) {
+func (c *cmdAdminInit) RunInteractive(_ *cobra.Command, d incus.InstanceServer, server *api.Server) (*api.InitPreseed, error) {
 	// Initialize config
 	config := api.InitPreseed{}
 	config.Server.Config = map[string]string{}
@@ -50,7 +51,7 @@ func (c *cmdAdminInit) RunInteractive(cmd *cobra.Command, args []string, d incus
 	}
 
 	// Clustering
-	err := c.askClustering(&config, d, server)
+	err := c.askClustering(&config, server)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +71,7 @@ func (c *cmdAdminInit) RunInteractive(cmd *cobra.Command, args []string, d incus
 		}
 
 		// Daemon config
-		err = c.askDaemon(&config, d, server)
+		err = c.askDaemon(&config, server)
 		if err != nil {
 			return nil, err
 		}
@@ -106,7 +107,7 @@ func (c *cmdAdminInit) RunInteractive(cmd *cobra.Command, args []string, d incus
 	return &config, nil
 }
 
-func (c *cmdAdminInit) askClustering(config *api.InitPreseed, d incus.InstanceServer, server *api.Server) error {
+func (c *cmdAdminInit) askClustering(config *api.InitPreseed, server *api.Server) error {
 	clustering, err := c.global.asker.AskBool(i18n.G("Would you like to use clustering?")+" (yes/no) [default=no]: ", "no")
 	if err != nil {
 		return err
@@ -132,7 +133,7 @@ func (c *cmdAdminInit) askClustering(config *api.InitPreseed, d incus.InstanceSe
 
 			host, _, _ := net.SplitHostPort(address)
 			if slices.Contains([]string{"", "[::]", "0.0.0.0"}, host) {
-				return fmt.Errorf(i18n.G("Invalid IP address or DNS name"))
+				return errors.New(i18n.G("Invalid IP address or DNS name"))
 			}
 
 			if err == nil {
@@ -170,7 +171,7 @@ func (c *cmdAdminInit) askClustering(config *api.InitPreseed, d incus.InstanceSe
 
 			// Root is required to access the certificate files
 			if os.Geteuid() != 0 {
-				return fmt.Errorf(i18n.G("Joining an existing cluster requires root privileges"))
+				return errors.New(i18n.G("Joining an existing cluster requires root privileges"))
 			}
 
 			var joinToken *api.ClusterMemberJoinToken
@@ -216,7 +217,7 @@ func (c *cmdAdminInit) askClustering(config *api.InitPreseed, d incus.InstanceSe
 			}
 
 			if config.Cluster.ClusterCertificate == "" {
-				return fmt.Errorf(i18n.G("Unable to connect to any of the cluster members specified in join token"))
+				return errors.New(i18n.G("Unable to connect to any of the cluster members specified in join token"))
 			}
 
 			// Pass the raw join token.
@@ -229,7 +230,7 @@ func (c *cmdAdminInit) askClustering(config *api.InitPreseed, d incus.InstanceSe
 			}
 
 			if !clusterWipeMember {
-				return fmt.Errorf(i18n.G("User aborted configuration"))
+				return errors.New(i18n.G("User aborted configuration"))
 			}
 
 			// Connect to existing cluster
@@ -491,7 +492,7 @@ func (c *cmdAdminInit) askStoragePool(config *api.InitPreseed, d incus.InstanceS
 
 	if len(availableBackends) == 0 {
 		if poolType != internalUtil.PoolTypeAny {
-			return fmt.Errorf(i18n.G("No storage backends available"))
+			return errors.New(i18n.G("No storage backends available"))
 		}
 
 		return fmt.Errorf(i18n.G("No %s storage backends available"), poolType)
@@ -697,7 +698,7 @@ func (c *cmdAdminInit) askStoragePool(config *api.InitPreseed, d incus.InstanceS
 							}
 
 							if result < 1 {
-								return fmt.Errorf(i18n.G("Minimum size is 1GiB"))
+								return errors.New(i18n.G("Minimum size is 1GiB"))
 							}
 
 							return nil
@@ -751,7 +752,7 @@ and make sure that your user can see and run the "thin_check" command before run
 				}
 
 				if !lvmContinueNoThin {
-					return fmt.Errorf(i18n.G("The LVM thin provisioning tools couldn't be found on the system"))
+					return errors.New(i18n.G("The LVM thin provisioning tools couldn't be found on the system"))
 				}
 
 				pool.Config["lvm.use_thinpool"] = "false"
@@ -765,7 +766,7 @@ and make sure that your user can see and run the "thin_check" command before run
 	return nil
 }
 
-func (c *cmdAdminInit) askDaemon(config *api.InitPreseed, d incus.InstanceServer, server *api.Server) error {
+func (c *cmdAdminInit) askDaemon(config *api.InitPreseed, server *api.Server) error {
 	// Detect lack of uid/gid
 	if linux.RunningInUserNS() {
 		fmt.Print("\n" + i18n.G(`We detected that you are running inside an unprivileged container.

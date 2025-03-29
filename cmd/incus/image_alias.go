@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -48,7 +49,7 @@ func (c *cmdImageAlias) Command() *cobra.Command {
 
 	// Workaround for subcommand usage errors. See: https://github.com/spf13/cobra/issues/706
 	cmd.Args = cobra.NoArgs
-	cmd.Run = func(cmd *cobra.Command, args []string) { _ = cmd.Usage() }
+	cmd.Run = func(cmd *cobra.Command, _ []string) { _ = cmd.Usage() }
 	return cmd
 }
 
@@ -72,7 +73,7 @@ func (c *cmdImageAliasCreate) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) > 1 {
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		}
@@ -108,7 +109,7 @@ func (c *cmdImageAliasCreate) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Alias name missing"))
+		return errors.New(i18n.G("Alias name missing"))
 	}
 
 	// Create the alias
@@ -137,7 +138,7 @@ func (c *cmdImageAliasDelete) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) > 0 {
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		}
@@ -164,7 +165,7 @@ func (c *cmdImageAliasDelete) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Alias name missing"))
+		return errors.New(i18n.G("Alias name missing"))
 	}
 
 	// Delete the alias
@@ -210,13 +211,13 @@ Pre-defined column shorthand chars:
 	cmd.Flags().StringVarP(&c.flagFormat, "format", "f", "table", i18n.G(`Format (csv|json|table|yaml|compact), use suffix ",noheader" to disable headers and ",header" to enable it if missing, e.g. csv,header`)+"``")
 	cmd.Flags().StringVarP(&c.flagColumns, "columns", "c", defaultImageAliasColumns, i18n.G("Columns")+"``")
 
-	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	cmd.PreRunE = func(cmd *cobra.Command, _ []string) error {
 		return cli.ValidateFlagFormatForListOutput(cmd.Flag("format").Value.String())
 	}
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) > 0 {
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		}
@@ -379,7 +380,7 @@ func (c *cmdImageAliasRename) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) > 0 {
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		}
@@ -406,7 +407,7 @@ func (c *cmdImageAliasRename) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Alias name missing"))
+		return errors.New(i18n.G("Alias name missing"))
 	}
 
 	// Rename the alias

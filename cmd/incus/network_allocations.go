@@ -62,7 +62,7 @@ Pre-defined column shorthand chars:
 	cmd.Flags().BoolVar(&c.flagAllProjects, "all-projects", false, i18n.G("Run against all projects"))
 	cmd.Flags().StringVarP(&c.flagColumns, "columns", "c", defaultNetworkAllocationColumns, i18n.G("Columns")+"``")
 
-	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	cmd.PreRunE = func(cmd *cobra.Command, _ []string) error {
 		return cli.ValidateFlagFormatForListOutput(cmd.Flag("format").Value.String())
 	}
 
@@ -126,7 +126,7 @@ func (c *cmdNetworkListAllocations) macAddressColumnData(alloc api.NetworkAlloca
 	return alloc.Hwaddr
 }
 
-func (c *cmdNetworkListAllocations) Run(cmd *cobra.Command, args []string) error {
+func (c *cmdNetworkListAllocations) Run(_ *cobra.Command, args []string) error {
 	remote := ""
 	if len(args) > 0 {
 		remote = args[0]

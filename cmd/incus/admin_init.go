@@ -4,6 +4,7 @@ package main
 
 import (
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"os"
 
@@ -66,24 +67,24 @@ func (c *cmdAdminInit) Command() *cobra.Command {
 	return cmd
 }
 
-func (c *cmdAdminInit) Run(cmd *cobra.Command, args []string) error {
+func (c *cmdAdminInit) Run(cmd *cobra.Command, _ []string) error {
 	// Quick checks.
 	if c.flagAuto && c.flagPreseed {
-		return fmt.Errorf(i18n.G("Can't use --auto and --preseed together"))
+		return errors.New(i18n.G("Can't use --auto and --preseed together"))
 	}
 
 	if c.flagMinimal && c.flagPreseed {
-		return fmt.Errorf(i18n.G("Can't use --minimal and --preseed together"))
+		return errors.New(i18n.G("Can't use --minimal and --preseed together"))
 	}
 
 	if c.flagMinimal && c.flagAuto {
-		return fmt.Errorf(i18n.G("Can't use --minimal and --auto together"))
+		return errors.New(i18n.G("Can't use --minimal and --auto together"))
 	}
 
 	if !c.flagAuto && (c.flagNetworkAddress != "" || c.flagNetworkPort != -1 ||
 		c.flagStorageBackend != "" || c.flagStorageDevice != "" ||
 		c.flagStorageLoopSize != -1 || c.flagStoragePool != "") {
-		return fmt.Errorf(i18n.G("Configuration flags require --auto"))
+		return errors.New(i18n.G("Configuration flags require --auto"))
 	}
 
 	if c.flagDump && (c.flagAuto || c.flagMinimal ||
@@ -91,7 +92,7 @@ func (c *cmdAdminInit) Run(cmd *cobra.Command, args []string) error {
 		c.flagNetworkPort != -1 || c.flagStorageBackend != "" ||
 		c.flagStorageDevice != "" || c.flagStorageLoopSize != -1 ||
 		c.flagStoragePool != "") {
-		return fmt.Errorf(i18n.G("Can't use --dump with other flags"))
+		return errors.New(i18n.G("Can't use --dump with other flags"))
 	}
 
 	// Connect to the daemon
@@ -120,7 +121,7 @@ func (c *cmdAdminInit) Run(cmd *cobra.Command, args []string) error {
 
 	// Preseed mode
 	if c.flagPreseed {
-		config, err = c.RunPreseed(cmd, args, d)
+		config, err = c.RunPreseed()
 		if err != nil {
 			return err
 		}
@@ -128,7 +129,7 @@ func (c *cmdAdminInit) Run(cmd *cobra.Command, args []string) error {
 
 	// Auto mode
 	if c.flagAuto || c.flagMinimal {
-		config, err = c.RunAuto(cmd, args, d, server)
+		config, err = c.RunAuto(d, server)
 		if err != nil {
 			return err
 		}
@@ -136,7 +137,7 @@ func (c *cmdAdminInit) Run(cmd *cobra.Command, args []string) error {
 
 	// Interactive mode
 	if !c.flagAuto && !c.flagMinimal && !c.flagPreseed {
-		config, err = c.RunInteractive(cmd, args, d, server)
+		config, err = c.RunInteractive(cmd, d, server)
 		if err != nil {
 			return err
 		}
@@ -191,7 +192,7 @@ func (c *cmdAdminInit) Run(cmd *cobra.Command, args []string) error {
 		}
 
 		if config.Cluster.ClusterCertificate == "" {
-			return fmt.Errorf(i18n.G("Unable to connect to any of the cluster members specified in join token"))
+			return errors.New(i18n.G("Unable to connect to any of the cluster members specified in join token"))
 		}
 	}
 

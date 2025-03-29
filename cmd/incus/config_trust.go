@@ -70,7 +70,7 @@ func (c *cmdConfigTrust) Command() *cobra.Command {
 
 	// Workaround for subcommand usage errors. See: https://github.com/spf13/cobra/issues/706
 	cmd.Args = cobra.NoArgs
-	cmd.Run = func(cmd *cobra.Command, args []string) { _ = cmd.Usage() }
+	cmd.Run = func(cmd *cobra.Command, _ []string) { _ = cmd.Usage() }
 	return cmd
 }
 
@@ -117,7 +117,7 @@ func (c *cmdConfigTrustAdd) Run(cmd *cobra.Command, args []string) error {
 
 	resource := resources[0]
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("A client name must be provided"))
+		return errors.New(i18n.G("A client name must be provided"))
 	}
 
 	// Prepare the request.
@@ -307,7 +307,7 @@ func (c *cmdConfigTrustEdit) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing certificate fingerprint"))
+		return errors.New(i18n.G("Missing certificate fingerprint"))
 	}
 
 	// If stdin isn't a terminal, read text from it
@@ -392,7 +392,7 @@ type certificateColumn struct {
 
 type rowData struct {
 	Cert    api.Certificate
-	TlsCert *x509.Certificate
+	TLSCert *x509.Certificate
 }
 
 func (c *cmdConfigTrustList) Command() *cobra.Command {
@@ -424,7 +424,7 @@ Column shorthand chars:
 	cmd.Flags().StringVarP(&c.flagColumns, "columns", "c", "ntdfe", i18n.G("Columns")+"``")
 	cmd.Flags().StringVarP(&c.flagFormat, "format", "f", "table", i18n.G(`Format (csv|json|table|yaml|compact), use suffix ",noheader" to disable headers and ",header" to enable it if missing, e.g. csv,header`)+"``")
 
-	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	cmd.PreRunE = func(cmd *cobra.Command, _ []string) error {
 		return cli.ValidateFlagFormatForListOutput(cmd.Flag("format").Value.String())
 	}
 
@@ -476,7 +476,7 @@ func (c *cmdConfigTrustList) nameColumnData(rowData rowData) string {
 }
 
 func (c *cmdConfigTrustList) commonNameColumnData(rowData rowData) string {
-	return rowData.TlsCert.Subject.CommonName
+	return rowData.TLSCert.Subject.CommonName
 }
 
 func (c *cmdConfigTrustList) fingerprintColumnData(rowData rowData) string {
@@ -488,11 +488,11 @@ func (c *cmdConfigTrustList) descriptionColumnData(rowData rowData) string {
 }
 
 func (c *cmdConfigTrustList) issueDateColumnData(rowData rowData) string {
-	return rowData.TlsCert.NotBefore.Local().Format(dateLayout)
+	return rowData.TLSCert.NotBefore.Local().Format(dateLayout)
 }
 
 func (c *cmdConfigTrustList) expiryDateColumnData(rowData rowData) string {
-	return rowData.TlsCert.NotAfter.Local().Format(dateLayout)
+	return rowData.TLSCert.NotAfter.Local().Format(dateLayout)
 }
 
 func (c *cmdConfigTrustList) restrictedColumnData(rowData rowData) string {
@@ -547,7 +547,7 @@ func (c *cmdConfigTrustList) Run(cmd *cobra.Command, args []string) error {
 	for _, cert := range trust {
 		certBlock, _ := pem.Decode([]byte(cert.Certificate))
 		if certBlock == nil {
-			return fmt.Errorf(i18n.G("Invalid certificate"))
+			return errors.New(i18n.G("Invalid certificate"))
 		}
 
 		tlsCert, err := x509.ParseCertificate(certBlock.Bytes)
@@ -616,7 +616,7 @@ Pre-defined column shorthand chars:
 	cmd.Flags().StringVarP(&c.flagFormat, "format", "f", "table", i18n.G(`Format (csv|json|table|yaml|compact), use suffix ",noheader" to disable headers and ",header" to enable it if missing, e.g. csv,header`)+"``")
 	cmd.Flags().StringVarP(&c.flagColumns, "columns", "c", defaultConfigTrustListTokenColumns, i18n.G("Columns")+"``")
 
-	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	cmd.PreRunE = func(cmd *cobra.Command, _ []string) error {
 		return cli.ValidateFlagFormatForListOutput(cmd.Flag("format").Value.String())
 	}
 
@@ -893,7 +893,7 @@ func (c *cmdConfigTrustShow) Run(cmd *cobra.Command, args []string) error {
 	client := resource.server
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing certificate fingerprint"))
+		return errors.New(i18n.G("Missing certificate fingerprint"))
 	}
 
 	// Show the certificate configuration

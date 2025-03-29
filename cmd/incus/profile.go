@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -92,7 +93,7 @@ func (c *cmdProfile) Command() *cobra.Command {
 
 	// Workaround for subcommand usage errors. See: https://github.com/spf13/cobra/issues/706
 	cmd.Args = cobra.NoArgs
-	cmd.Run = func(cmd *cobra.Command, args []string) { _ = cmd.Usage() }
+	cmd.Run = func(cmd *cobra.Command, _ []string) { _ = cmd.Usage() }
 	return cmd
 }
 
@@ -111,7 +112,7 @@ func (c *cmdProfileAdd) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpInstances(toComplete)
 		}
@@ -142,7 +143,7 @@ func (c *cmdProfileAdd) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing instance name"))
+		return errors.New(i18n.G("Missing instance name"))
 	}
 
 	// Add the profile
@@ -195,7 +196,7 @@ incus profile assign foo ''
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpInstances(toComplete)
 		}
@@ -223,7 +224,7 @@ func (c *cmdProfileAssign) Run(cmd *cobra.Command, args []string) error {
 
 	// Assign the profiles
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing instance name"))
+		return errors.New(i18n.G("Missing instance name"))
 	}
 
 	inst, etag, err := resource.server.GetInstance(resource.name)
@@ -279,7 +280,7 @@ func (c *cmdProfileCopy) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpProfiles(toComplete, true)
 		}
@@ -311,7 +312,7 @@ func (c *cmdProfileCopy) Run(cmd *cobra.Command, args []string) error {
 	dest := resources[1]
 
 	if source.name == "" {
-		return fmt.Errorf(i18n.G("Missing source profile name"))
+		return errors.New(i18n.G("Missing source profile name"))
 	}
 
 	if dest.name == "" {
@@ -368,7 +369,7 @@ incus profile create p1 < config.yaml
 
 	cmd.Flags().StringVar(&c.flagDescription, "description", "", i18n.G("Profile description")+"``")
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpRemotes(toComplete, false)
 		}
@@ -410,7 +411,7 @@ func (c *cmdProfileCreate) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing profile name"))
+		return errors.New(i18n.G("Missing profile name"))
 	}
 
 	// Create the profile
@@ -450,7 +451,7 @@ func (c *cmdProfileDelete) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpProfiles(toComplete, true)
 		}
@@ -477,7 +478,7 @@ func (c *cmdProfileDelete) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing profile name"))
+		return errors.New(i18n.G("Missing profile name"))
 	}
 
 	// Delete the profile
@@ -511,7 +512,7 @@ func (c *cmdProfileEdit) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpProfiles(toComplete, true)
 		}
@@ -559,7 +560,7 @@ func (c *cmdProfileEdit) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing profile name"))
+		return errors.New(i18n.G("Missing profile name"))
 	}
 
 	// If stdin isn't a terminal, read text from it
@@ -646,7 +647,7 @@ func (c *cmdProfileGet) Command() *cobra.Command {
 
 	cmd.Flags().BoolVarP(&c.flagIsProperty, "property", "p", false, i18n.G("Get the key as a profile property"))
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpProfiles(toComplete, true)
 		}
@@ -677,7 +678,7 @@ func (c *cmdProfileGet) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing profile name"))
+		return errors.New(i18n.G("Missing profile name"))
 	}
 
 	// Get the configuration key
@@ -688,7 +689,7 @@ func (c *cmdProfileGet) Run(cmd *cobra.Command, args []string) error {
 
 	if c.flagIsProperty {
 		w := profile.Writable()
-		res, err := getFieldByJsonTag(&w, args[1])
+		res, err := getFieldByJSONTag(&w, args[1])
 		if err != nil {
 			return fmt.Errorf(i18n.G("The property %q does not exist on the profile %q: %v"), args[1], resource.name, err)
 		}
@@ -734,11 +735,11 @@ u - Used By`))
 	cmd.Flags().StringVarP(&c.flagFormat, "format", "f", "table", i18n.G(`Format (csv|json|table|yaml|compact), use suffix ",noheader" to disable headers and ",header" to enable it if missing, e.g. csv,header`)+"``")
 	cmd.Flags().BoolVar(&c.flagAllProjects, "all-projects", false, i18n.G("Display profiles from all projects"))
 
-	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	cmd.PreRunE = func(cmd *cobra.Command, _ []string) error {
 		return cli.ValidateFlagFormatForListOutput(cmd.Flag("format").Value.String())
 	}
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpRemotes(toComplete, false)
 		}
@@ -814,7 +815,7 @@ func (c *cmdProfileList) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if c.global.flagProject != "" && c.flagAllProjects {
-		return fmt.Errorf(i18n.G("Can't specify --project with --all-projects"))
+		return errors.New(i18n.G("Can't specify --project with --all-projects"))
 	}
 
 	// Parse remote
@@ -884,7 +885,7 @@ func (c *cmdProfileRemove) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpInstances(toComplete)
 		}
@@ -915,7 +916,7 @@ func (c *cmdProfileRemove) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing instance name"))
+		return errors.New(i18n.G("Missing instance name"))
 	}
 
 	// Remove the profile
@@ -972,7 +973,7 @@ func (c *cmdProfileRename) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpProfiles(toComplete, true)
 		}
@@ -999,7 +1000,7 @@ func (c *cmdProfileRename) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing profile name"))
+		return errors.New(i18n.G("Missing profile name"))
 	}
 
 	// Rename the profile
@@ -1036,7 +1037,7 @@ For backward compatibility, a single configuration key may still be set with:
 	cmd.RunE = c.Run
 	cmd.Flags().BoolVarP(&c.flagIsProperty, "property", "p", false, i18n.G("Set the key as a profile property"))
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpProfiles(toComplete, true)
 		}
@@ -1067,7 +1068,7 @@ func (c *cmdProfileSet) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing profile name"))
+		return errors.New(i18n.G("Missing profile name"))
 	}
 
 	// Get the profile
@@ -1086,7 +1087,7 @@ func (c *cmdProfileSet) Run(cmd *cobra.Command, args []string) error {
 	if c.flagIsProperty {
 		if cmd.Name() == "unset" {
 			for k := range keys {
-				err := unsetFieldByJsonTag(&writable, k)
+				err := unsetFieldByJSONTag(&writable, k)
 				if err != nil {
 					return fmt.Errorf(i18n.G("Error unsetting property: %v"), err)
 				}
@@ -1121,7 +1122,7 @@ func (c *cmdProfileShow) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpProfiles(toComplete, true)
 		}
@@ -1148,7 +1149,7 @@ func (c *cmdProfileShow) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing profile name"))
+		return errors.New(i18n.G("Missing profile name"))
 	}
 
 	// Show the profile
@@ -1186,7 +1187,7 @@ func (c *cmdProfileUnset) Command() *cobra.Command {
 	cmd.RunE = c.Run
 	cmd.Flags().BoolVarP(&c.flagIsProperty, "property", "p", false, i18n.G("Unset the key as a profile property"))
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpProfiles(toComplete, true)
 		}

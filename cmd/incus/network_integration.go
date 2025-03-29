@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -66,7 +67,7 @@ func (c *cmdNetworkIntegration) Command() *cobra.Command {
 
 	// Workaround for subcommand usage errors. See: https://github.com/spf13/cobra/issues/706
 	cmd.Args = cobra.NoArgs
-	cmd.Run = func(cmd *cobra.Command, args []string) { _ = cmd.Usage() }
+	cmd.Run = func(cmd *cobra.Command, _ []string) { _ = cmd.Usage() }
 	return cmd
 }
 
@@ -128,7 +129,7 @@ func (c *cmdNetworkIntegrationCreate) Run(cmd *cobra.Command, args []string) err
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing network integration name"))
+		return errors.New(i18n.G("Missing network integration name"))
 	}
 
 	// Create the network integration
@@ -200,7 +201,7 @@ func (c *cmdNetworkIntegrationDelete) Run(cmd *cobra.Command, args []string) err
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing network integration name"))
+		return errors.New(i18n.G("Missing network integration name"))
 	}
 
 	// Delete the network integration
@@ -263,7 +264,7 @@ func (c *cmdNetworkIntegrationEdit) Run(cmd *cobra.Command, args []string) error
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing network integration name"))
+		return errors.New(i18n.G("Missing network integration name"))
 	}
 
 	// If stdin isn't a terminal, read text from it
@@ -374,7 +375,7 @@ func (c *cmdNetworkIntegrationGet) Run(cmd *cobra.Command, args []string) error 
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing network integration name"))
+		return errors.New(i18n.G("Missing network integration name"))
 	}
 
 	// Get the configuration key
@@ -385,7 +386,7 @@ func (c *cmdNetworkIntegrationGet) Run(cmd *cobra.Command, args []string) error 
 
 	if c.flagIsProperty {
 		w := networkIntegration.Writable()
-		res, err := getFieldByJsonTag(&w, args[1])
+		res, err := getFieldByJSONTag(&w, args[1])
 		if err != nil {
 			return fmt.Errorf(i18n.G("The property %q does not exist on the network integration %q: %v"), args[1], resource.name, err)
 		}
@@ -437,7 +438,7 @@ Pre-defined column shorthand chars:
 	cmd.Flags().StringVarP(&c.flagFormat, "format", "f", "table", i18n.G(`Format (csv|json|table|yaml|compact), use suffix ",noheader" to disable headers and ",header" to enable it if missing, e.g. csv,header`)+"``")
 	cmd.Flags().StringVarP(&c.flagColumns, "columns", "c", defaultNetworkIntegrationColumns, i18n.G("Columns")+"``")
 
-	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	cmd.PreRunE = func(cmd *cobra.Command, _ []string) error {
 		return cli.ValidateFlagFormatForListOutput(cmd.Flag("format").Value.String())
 	}
 
@@ -585,7 +586,7 @@ func (c *cmdNetworkIntegrationRename) Run(cmd *cobra.Command, args []string) err
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing network integration name"))
+		return errors.New(i18n.G("Missing network integration name"))
 	}
 
 	// Rename the network integration
@@ -642,7 +643,7 @@ func (c *cmdNetworkIntegrationSet) Run(cmd *cobra.Command, args []string) error 
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing network integration name"))
+		return errors.New(i18n.G("Missing network integration name"))
 	}
 
 	// Get the network integration
@@ -661,7 +662,7 @@ func (c *cmdNetworkIntegrationSet) Run(cmd *cobra.Command, args []string) error 
 	if c.flagIsProperty {
 		if cmd.Name() == "unset" {
 			for k := range keys {
-				err := unsetFieldByJsonTag(&writable, k)
+				err := unsetFieldByJSONTag(&writable, k)
 				if err != nil {
 					return fmt.Errorf(i18n.G("Error unsetting property: %v"), err)
 				}
@@ -753,7 +754,7 @@ func (c *cmdNetworkIntegrationShow) Run(cmd *cobra.Command, args []string) error
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing network integration name"))
+		return errors.New(i18n.G("Missing network integration name"))
 	}
 
 	// Show the network integration

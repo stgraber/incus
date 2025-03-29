@@ -525,7 +525,6 @@ func (g *cmdGlobal) cmpNetworkForwardConfigs(networkName string, listenAddress s
 }
 
 func (g *cmdGlobal) cmpNetworkForwards(networkName string) ([]string, cobra.ShellCompDirective) {
-	results := []string{}
 	cmpDirectives := cobra.ShellCompDirectiveNoFileComp
 
 	resources, _ := g.ParseServers(networkName)
@@ -545,7 +544,6 @@ func (g *cmdGlobal) cmpNetworkForwards(networkName string) ([]string, cobra.Shel
 }
 
 func (g *cmdGlobal) cmpNetworkLoadBalancers(networkName string) ([]string, cobra.ShellCompDirective) {
-	results := []string{}
 	cmpDirectives := cobra.ShellCompDirectiveNoFileComp
 
 	resources, _ := g.ParseServers(networkName)
@@ -589,7 +587,6 @@ func (g *cmdGlobal) cmpNetworkPeerConfigs(networkName string, peerName string) (
 }
 
 func (g *cmdGlobal) cmpNetworkPeers(networkName string) ([]string, cobra.ShellCompDirective) {
-	results := []string{}
 	cmpDirectives := cobra.ShellCompDirectiveNoFileComp
 
 	resources, _ := g.ParseServers(networkName)
@@ -771,7 +768,6 @@ func (g *cmdGlobal) cmpNetworkZoneRecordConfigs(zoneName string, recordName stri
 }
 
 func (g *cmdGlobal) cmpNetworkZoneRecords(zoneName string) ([]string, cobra.ShellCompDirective) {
-	results := []string{}
 	cmpDirectives := cobra.ShellCompDirectiveNoFileComp
 
 	resources, _ := g.ParseServers(zoneName)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -109,7 +110,7 @@ incus cluster group assign foo default
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpClusterMembers(toComplete)
 		}
@@ -142,7 +143,7 @@ func (c *cmdClusterGroupAssign) Run(cmd *cobra.Command, args []string) error {
 
 	// Assign the cluster group
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing cluster member name"))
+		return errors.New(i18n.G("Missing cluster member name"))
 	}
 
 	member, etag, err := resource.server.GetClusterMember(resource.name)
@@ -197,7 +198,7 @@ incus cluster group create g1 < config.yaml
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpRemotes(toComplete, false)
 		}
@@ -240,7 +241,7 @@ func (c *cmdClusterGroupCreate) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing cluster group name"))
+		return errors.New(i18n.G("Missing cluster group name"))
 	}
 
 	// Create the cluster group
@@ -282,7 +283,7 @@ func (c *cmdClusterGroupDelete) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpClusterGroups(toComplete)
 		}
@@ -310,7 +311,7 @@ func (c *cmdClusterGroupDelete) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing cluster group name"))
+		return errors.New(i18n.G("Missing cluster group name"))
 	}
 
 	// Delete the cluster group
@@ -342,7 +343,7 @@ func (c *cmdClusterGroupEdit) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpClusterGroups(toComplete)
 		}
@@ -370,7 +371,7 @@ func (c *cmdClusterGroupEdit) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing cluster group name"))
+		return errors.New(i18n.G("Missing cluster group name"))
 	}
 
 	// If stdin isn't a terminal, read text from it
@@ -485,13 +486,13 @@ Pre-defined column shorthand chars:
 	cmd.Flags().StringVarP(&c.flagColumns, "columns", "c", defaultClusterGroupColumns, i18n.G("Columns")+"``")
 	cmd.Flags().StringVarP(&c.flagFormat, "format", "f", "table", i18n.G(`Format (csv|json|table|yaml|compact), use suffix ",noheader" to disable headers and ",header" to enable it if missing, e.g. csv,header`)+"``")
 
-	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	cmd.PreRunE = func(cmd *cobra.Command, _ []string) error {
 		return cli.ValidateFlagFormatForListOutput(cmd.Flag("format").Value.String())
 	}
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpRemotes(toComplete, false)
 		}
@@ -572,7 +573,7 @@ func (c *cmdClusterGroupList) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if !cluster.Enabled {
-		return fmt.Errorf(i18n.G("Server isn't part of a cluster"))
+		return errors.New(i18n.G("Server isn't part of a cluster"))
 	}
 
 	groups, err := resource.server.GetClusterGroups()
@@ -623,7 +624,7 @@ func (c *cmdClusterGroupRemove) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpClusterMembers(toComplete)
 		}
@@ -655,7 +656,7 @@ func (c *cmdClusterGroupRemove) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing cluster member name"))
+		return errors.New(i18n.G("Missing cluster member name"))
 	}
 
 	// Remove the cluster group
@@ -708,7 +709,7 @@ func (c *cmdClusterGroupRename) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpClusterGroups(toComplete)
 		}
@@ -764,7 +765,7 @@ func (c *cmdClusterGroupShow) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpClusterGroups(toComplete)
 		}
@@ -792,7 +793,7 @@ func (c *cmdClusterGroupShow) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing cluster group name"))
+		return errors.New(i18n.G("Missing cluster group name"))
 	}
 
 	// Show the cluster group
@@ -826,7 +827,7 @@ func (c *cmdClusterGroupAdd) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpClusterMembers(toComplete)
 		}
@@ -857,7 +858,7 @@ func (c *cmdClusterGroupAdd) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing cluster member name"))
+		return errors.New(i18n.G("Missing cluster member name"))
 	}
 
 	// Retrieve cluster member information.
@@ -902,7 +903,7 @@ func (c *cmdClusterGroupGet) Command() *cobra.Command {
 	cmd.Flags().BoolVarP(&c.flagIsProperty, "property", "p", false, i18n.G("Get the key as a cluster group property"))
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpClusterGroups(toComplete)
 		}
@@ -941,7 +942,7 @@ func (c *cmdClusterGroupGet) Run(cmd *cobra.Command, args []string) error {
 
 	if c.flagIsProperty {
 		w := group.Writable()
-		res, err := getFieldByJsonTag(&w, args[1])
+		res, err := getFieldByJSONTag(&w, args[1])
 		if err != nil {
 			return fmt.Errorf(i18n.G("The property %q does not exist on the cluster group %q: %v"), args[1], resource.name, err)
 		}
@@ -977,7 +978,7 @@ func (c *cmdClusterGroupSet) Command() *cobra.Command {
 	cmd.Flags().BoolVarP(&c.flagIsProperty, "property", "p", false, i18n.G("Set the key as a cluster group property"))
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpClusterGroups(toComplete)
 		}
@@ -1020,7 +1021,7 @@ func (c *cmdClusterGroupSet) Run(cmd *cobra.Command, args []string) error {
 	if c.flagIsProperty {
 		if cmd.Name() == "unset" {
 			for k := range keys {
-				err := unsetFieldByJsonTag(&writable, k)
+				err := unsetFieldByJSONTag(&writable, k)
 				if err != nil {
 					return fmt.Errorf(i18n.G("Error unsetting property: %v"), err)
 				}
@@ -1059,7 +1060,7 @@ func (c *cmdClusterGroupUnset) Command() *cobra.Command {
 	cmd.Flags().BoolVarP(&c.flagIsProperty, "property", "p", false, i18n.G("Unset the key as a cluster group property"))
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpClusterGroups(toComplete)
 		}

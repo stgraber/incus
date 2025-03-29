@@ -27,7 +27,7 @@ func (c *cmdManpage) Command() *cobra.Command {
 	cmd.Flags().StringVarP(&c.flagFormat, "format", "f", "man", i18n.G("Format (man|md|rest|yaml)")+"``")
 	cmd.Flags().BoolVar(&c.flagAll, "all", false, i18n.G("Include less common commands"))
 
-	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	cmd.PreRunE = func(cmd *cobra.Command, _ []string) error {
 		format := cmd.Flag("format").Value.String()
 		switch format {
 		case "man", "md", "rest", "yaml":

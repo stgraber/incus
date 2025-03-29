@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -66,7 +67,7 @@ incus launch images:debian/12 v2 --vm -d root,size=50GiB -d root,io.bus=nvme
 	cmd.Flags().BoolVar(&c.flagVM, "vm", false, i18n.G("Create a virtual machine"))
 	cmd.Flags().StringVar(&c.flagDescription, "description", "", i18n.G("Instance description")+"``")
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) != 0 {
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		}
@@ -138,7 +139,7 @@ func (c *cmdCreate) create(conf *config.Config, args []string, launch bool) (inc
 
 	if c.flagEmpty {
 		if len(args) > 1 {
-			return nil, "", fmt.Errorf(i18n.G("--empty cannot be combined with an image name"))
+			return nil, "", errors.New(i18n.G("--empty cannot be combined with an image name"))
 		}
 
 		if len(args) == 0 {
@@ -385,7 +386,7 @@ func (c *cmdCreate) create(conf *config.Config, args []string, launch bool) (inc
 
 		if conf.Remotes[iremote].Protocol == "incus" {
 			if imgInfo.Type != "virtual-machine" && c.flagVM {
-				return nil, "", fmt.Errorf(i18n.G("Asked for a VM but image is of type container"))
+				return nil, "", errors.New(i18n.G("Asked for a VM but image is of type container"))
 			}
 
 			req.Type = api.InstanceType(imgInfo.Type)
@@ -442,7 +443,7 @@ func (c *cmdCreate) create(conf *config.Config, args []string, launch bool) (inc
 
 	instances, ok := opInfo.Resources["instances"]
 	if !ok || len(instances) == 0 {
-		return nil, "", fmt.Errorf(i18n.G("Didn't get name of new instance from the server"))
+		return nil, "", errors.New(i18n.G("Didn't get name of new instance from the server"))
 	}
 
 	if len(instances) == 1 && name == "" {

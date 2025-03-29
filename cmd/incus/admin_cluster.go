@@ -29,7 +29,7 @@ func (c *cmdAdminCluster) Command() *cobra.Command {
 	return cmd
 }
 
-func (c *cmdAdminCluster) Run(cmd *cobra.Command, args []string) {
+func (c *cmdAdminCluster) Run(_ *cobra.Command, args []string) {
 	env := getEnviron()
 	path, _ := exec.LookPath("incusd")
 	if path == "" {

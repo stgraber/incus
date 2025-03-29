@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -65,7 +66,7 @@ incus move <instance>/<old snapshot name> <instance>/<new snapshot name>
 	cmd.Flags().StringVar(&c.flagTargetProject, "target-project", "", i18n.G("Copy to a project different from the source")+"``")
 	cmd.Flags().BoolVar(&c.flagAllowInconsistent, "allow-inconsistent", false, i18n.G("Ignore copy errors for volatile files"))
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpInstances(toComplete)
 		}
@@ -124,7 +125,7 @@ func (c *cmdMove) Run(cmd *cobra.Command, args []string) error {
 	// simply won't work).
 	if sourceRemote == destRemote && c.flagTarget == "" && c.flagStorage == "" && c.flagTargetProject == "" {
 		if c.flagConfig != nil || c.flagDevice != nil || c.flagProfile != nil || c.flagNoProfiles {
-			return fmt.Errorf(i18n.G("Can't override configuration or profiles in local rename"))
+			return errors.New(i18n.G("Can't override configuration or profiles in local rename"))
 		}
 
 		source, err := conf.GetInstanceServer(sourceRemote)
@@ -247,7 +248,7 @@ func (c *cmdMove) moveInstance(sourceResource string, destResource string, state
 
 	// Make sure we have an instance or snapshot name.
 	if sourceName == "" {
-		return fmt.Errorf(i18n.G("You must specify a source instance name"))
+		return errors.New(i18n.G("You must specify a source instance name"))
 	}
 
 	// The destination name is optional.
@@ -262,7 +263,7 @@ func (c *cmdMove) moveInstance(sourceResource string, destResource string, state
 	}
 
 	if !source.IsClustered() && c.flagTarget != "" {
-		return fmt.Errorf(i18n.G("--target can only be used with clusters"))
+		return errors.New(i18n.G("--target can only be used with clusters"))
 	}
 
 	// Set the target if specified.

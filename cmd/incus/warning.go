@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -49,7 +50,7 @@ func (c *cmdWarning) Command() *cobra.Command {
 
 	// Workaround for subcommand usage errors. See: https://github.com/spf13/cobra/issues/706
 	cmd.Args = cobra.NoArgs
-	cmd.Run = func(cmd *cobra.Command, args []string) { _ = cmd.Usage() }
+	cmd.Run = func(cmd *cobra.Command, _ []string) { _ = cmd.Usage() }
 	return cmd
 }
 
@@ -95,7 +96,7 @@ Column shorthand chars:
 	cmd.Flags().StringVarP(&c.flagFormat, "format", "f", "table", i18n.G(`Format (csv|json|table|yaml|compact), use suffix ",noheader" to disable headers and ",header" to enable it if missing, e.g. csv,header`)+"``")
 	cmd.Flags().BoolVarP(&c.flagAll, "all", "a", false, i18n.G("List all warnings")+"``")
 
-	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	cmd.PreRunE = func(cmd *cobra.Command, _ []string) error {
 		return cli.ValidateFlagFormatForListOutput(cmd.Flag("format").Value.String())
 	}
 
@@ -104,7 +105,7 @@ Column shorthand chars:
 	return cmd
 }
 
-func (c *cmdWarningList) Run(cmd *cobra.Command, args []string) error {
+func (c *cmdWarningList) Run(_ *cobra.Command, args []string) error {
 	// Parse remote
 	remote := ""
 	if len(args) > 0 {
@@ -227,7 +228,7 @@ func (c *cmdWarningList) parseColumns(clustered bool) ([]warningColumn, error) {
 	} else {
 		if c.flagColumns != defaultWarningColumns {
 			if strings.ContainsAny(c.flagColumns, "L") {
-				return nil, fmt.Errorf(i18n.G("Can't specify column L when not clustered"))
+				return nil, errors.New(i18n.G("Can't specify column L when not clustered"))
 			}
 		}
 		c.flagColumns = strings.ReplaceAll(c.flagColumns, "L", "")

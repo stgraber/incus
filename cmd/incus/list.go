@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -136,11 +137,11 @@ incus list -c ns,user.comment:comment
 	cmd.Flags().BoolVar(&c.flagFast, "fast", false, i18n.G("Fast mode (same as --columns=nsacPt)"))
 	cmd.Flags().BoolVar(&c.flagAllProjects, "all-projects", false, i18n.G("Display instances from all projects"))
 
-	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	cmd.PreRunE = func(cmd *cobra.Command, _ []string) error {
 		return cli.ValidateFlagFormatForListOutput(cmd.Flag("format").Value.String())
 	}
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpRemotes(toComplete, false)
 		}
@@ -456,7 +457,7 @@ func (c *cmdList) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if c.global.flagProject != "" && c.flagAllProjects {
-		return fmt.Errorf(i18n.G("Can't specify --project with --all-projects"))
+		return errors.New(i18n.G("Can't specify --project with --all-projects"))
 	}
 
 	// Parse the remote
@@ -604,7 +605,7 @@ func (c *cmdList) parseColumns(clustered bool) ([]column, bool, error) {
 	if c.flagFast {
 		if c.flagColumns != defaultColumns && c.flagColumns != defaultColumnsAllProjects {
 			// --columns was specified too
-			return nil, false, fmt.Errorf(i18n.G("Can't specify --fast with --columns"))
+			return nil, false, errors.New(i18n.G("Can't specify --fast with --columns"))
 		}
 
 		if c.flagColumns == defaultColumnsAllProjects {
@@ -621,7 +622,7 @@ func (c *cmdList) parseColumns(clustered bool) ([]column, bool, error) {
 	} else {
 		if c.flagColumns != defaultColumns && c.flagColumns != defaultColumnsAllProjects {
 			if strings.ContainsAny(c.flagColumns, "L") {
-				return nil, false, fmt.Errorf(i18n.G("Can't specify column L when not clustered"))
+				return nil, false, errors.New(i18n.G("Can't specify column L when not clustered"))
 			}
 		}
 		c.flagColumns = strings.ReplaceAll(c.flagColumns, "L", "")
@@ -967,19 +968,19 @@ func (c *cmdList) locationColumnData(cInfo api.InstanceFull) string {
 	return cInfo.Location
 }
 
-func (c *cmdList) matchByType(cInfo *api.Instance, cState *api.InstanceState, query string) bool {
+func (c *cmdList) matchByType(cInfo *api.Instance, _ *api.InstanceState, query string) bool {
 	return strings.EqualFold(cInfo.Type, query)
 }
 
-func (c *cmdList) matchByStatus(cInfo *api.Instance, cState *api.InstanceState, query string) bool {
+func (c *cmdList) matchByStatus(cInfo *api.Instance, _ *api.InstanceState, query string) bool {
 	return strings.EqualFold(cInfo.Status, query)
 }
 
-func (c *cmdList) matchByArchitecture(cInfo *api.Instance, cState *api.InstanceState, query string) bool {
+func (c *cmdList) matchByArchitecture(cInfo *api.Instance, _ *api.InstanceState, query string) bool {
 	return strings.EqualFold(cInfo.InstancePut.Architecture, query)
 }
 
-func (c *cmdList) matchByLocation(cInfo *api.Instance, cState *api.InstanceState, query string) bool {
+func (c *cmdList) matchByLocation(cInfo *api.Instance, _ *api.InstanceState, query string) bool {
 	return strings.EqualFold(cInfo.Location, query)
 }
 

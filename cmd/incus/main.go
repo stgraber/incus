@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"os/user"
@@ -365,7 +366,7 @@ If you already added a remote server, make it the default with "incus remote swi
 	}
 }
 
-func (c *cmdGlobal) PreRun(cmd *cobra.Command, args []string) error {
+func (c *cmdGlobal) PreRun(cmd *cobra.Command, _ []string) error {
 	var err error
 
 	// If calling the help, skip pre-run
@@ -494,7 +495,7 @@ Or for a virtual machine: incus launch images:ubuntu/22.04 --vm`)+"\n")
 	return nil
 }
 
-func (c *cmdGlobal) PostRun(cmd *cobra.Command, args []string) error {
+func (c *cmdGlobal) PostRun(_ *cobra.Command, _ []string) error {
 	if c.conf != nil && util.PathExists(c.confPath) {
 		// Save OIDC tokens on exit
 		c.conf.SaveOIDCTokens()
@@ -556,7 +557,7 @@ func (c *cmdGlobal) CheckArgs(cmd *cobra.Command, args []string, minArgs int, ma
 			return true, nil
 		}
 
-		return true, fmt.Errorf(i18n.G("Invalid number of arguments"))
+		return true, errors.New(i18n.G("Invalid number of arguments"))
 	}
 
 	return false, nil

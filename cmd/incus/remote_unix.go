@@ -222,13 +222,13 @@ func (h remoteProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Increase counters.
 	defer func() {
 		h.mu.Lock()
-		*h.connections -= 1
+		*h.connections--
 		h.mu.Unlock()
 	}()
 
 	h.mu.Lock()
-	*h.transactions += 1
-	*h.connections += 1
+	*h.transactions++
+	*h.connections++
 	h.mu.Unlock()
 
 	// Basic auth.

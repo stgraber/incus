@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -86,7 +87,7 @@ func (c *cmdProject) Command() *cobra.Command {
 
 	// Workaround for subcommand usage errors. See: https://github.com/spf13/cobra/issues/706
 	cmd.Args = cobra.NoArgs
-	cmd.Run = func(cmd *cobra.Command, args []string) { _ = cmd.Usage() }
+	cmd.Run = func(cmd *cobra.Command, _ []string) { _ = cmd.Usage() }
 	return cmd
 }
 
@@ -115,7 +116,7 @@ incus project create p1 < config.yaml
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpRemotes(toComplete, false)
 		}
@@ -157,7 +158,7 @@ func (c *cmdProjectCreate) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing project name"))
+		return errors.New(i18n.G("Missing project name"))
 	}
 
 	// Create the project
@@ -212,7 +213,7 @@ func (c *cmdProjectDelete) Command() *cobra.Command {
 	cmd.Flags().BoolVarP(&c.flagForce, "force", "f", false, i18n.G("Force delete the project and everything it contains."))
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpProjects(toComplete)
 		}
@@ -231,7 +232,7 @@ func (c *cmdProjectDelete) promptConfirmation(name string) error {
 	input = strings.TrimSuffix(input, "\n")
 
 	if !slices.Contains([]string{i18n.G("yes")}, strings.ToLower(input)) {
-		return fmt.Errorf(i18n.G("User aborted delete operation"))
+		return errors.New(i18n.G("User aborted delete operation"))
 	}
 
 	return nil
@@ -258,7 +259,7 @@ func (c *cmdProjectDelete) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing project name"))
+		return errors.New(i18n.G("Missing project name"))
 	}
 
 	// Delete the project, server is unable to find the project here.
@@ -312,7 +313,7 @@ func (c *cmdProjectEdit) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpProjects(toComplete)
 		}
@@ -360,7 +361,7 @@ func (c *cmdProjectEdit) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing project name"))
+		return errors.New(i18n.G("Missing project name"))
 	}
 
 	// If stdin isn't a terminal, read text from it
@@ -446,7 +447,7 @@ func (c *cmdProjectGet) Command() *cobra.Command {
 	cmd.RunE = c.Run
 	cmd.Flags().BoolVarP(&c.flagIsProperty, "property", "p", false, i18n.G("Get the key as a project property"))
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpProjects(toComplete)
 		}
@@ -477,7 +478,7 @@ func (c *cmdProjectGet) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing project name"))
+		return errors.New(i18n.G("Missing project name"))
 	}
 
 	// Get the configuration key
@@ -488,7 +489,7 @@ func (c *cmdProjectGet) Run(cmd *cobra.Command, args []string) error {
 
 	if c.flagIsProperty {
 		w := project.Writable()
-		res, err := getFieldByJsonTag(&w, args[1])
+		res, err := getFieldByJSONTag(&w, args[1])
 		if err != nil {
 			return fmt.Errorf(i18n.G("The property %q does not exist on the project %q: %v"), args[1], resource.name, err)
 		}
@@ -538,13 +539,13 @@ u - Used By`))
 
 	cmd.Flags().StringVarP(&c.flagFormat, "format", "f", "table", i18n.G(`Format (csv|json|table|yaml|compact), use suffix ",noheader" to disable headers and ",header" to enable it if missing, e.g. csv,header`)+"``")
 
-	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	cmd.PreRunE = func(cmd *cobra.Command, _ []string) error {
 		return cli.ValidateFlagFormatForListOutput(cmd.Flag("format").Value.String())
 	}
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpRemotes(toComplete, false)
 		}
@@ -739,7 +740,7 @@ func (c *cmdProjectRename) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpProjects(toComplete)
 		}
@@ -766,7 +767,7 @@ func (c *cmdProjectRename) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing project name"))
+		return errors.New(i18n.G("Missing project name"))
 	}
 
 	// Rename the project
@@ -808,7 +809,7 @@ For backward compatibility, a single configuration key may still be set with:
 	cmd.RunE = c.Run
 	cmd.Flags().BoolVarP(&c.flagIsProperty, "property", "p", false, i18n.G("Set the key as a project property"))
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpProjects(toComplete)
 		}
@@ -835,7 +836,7 @@ func (c *cmdProjectSet) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing project name"))
+		return errors.New(i18n.G("Missing project name"))
 	}
 
 	// Get the project
@@ -854,7 +855,7 @@ func (c *cmdProjectSet) Run(cmd *cobra.Command, args []string) error {
 	if c.flagIsProperty {
 		if cmd.Name() == "unset" {
 			for k := range keys {
-				err := unsetFieldByJsonTag(&writable, k)
+				err := unsetFieldByJSONTag(&writable, k)
 				if err != nil {
 					return fmt.Errorf(i18n.G("Error unsetting property: %v"), err)
 				}
@@ -893,7 +894,7 @@ func (c *cmdProjectUnset) Command() *cobra.Command {
 	cmd.RunE = c.Run
 	cmd.Flags().BoolVarP(&c.flagIsProperty, "property", "p", false, i18n.G("Unset the key as a project property"))
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpProjects(toComplete)
 		}
@@ -936,7 +937,7 @@ func (c *cmdProjectShow) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpProjects(toComplete)
 		}
@@ -963,7 +964,7 @@ func (c *cmdProjectShow) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing project name"))
+		return errors.New(i18n.G("Missing project name"))
 	}
 
 	// Show the project
@@ -997,7 +998,7 @@ func (c *cmdProjectSwitch) Command() *cobra.Command {
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpProjects(toComplete)
 		}
@@ -1065,13 +1066,13 @@ func (c *cmdProjectInfo) Command() *cobra.Command {
 	cmd.Flags().BoolVar(&c.flagShowAccess, "show-access", false, i18n.G("Show the instance's access list"))
 	cmd.Flags().StringVarP(&c.flagFormat, "format", "f", "table", i18n.G(`Format (csv|json|table|yaml|compact), use suffix ",noheader" to disable headers and ",header" to enable it if missing, e.g. csv,header`)+"``")
 
-	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	cmd.PreRunE = func(cmd *cobra.Command, _ []string) error {
 		return cli.ValidateFlagFormatForListOutput(cmd.Flag("format").Value.String())
 	}
 
 	cmd.RunE = c.Run
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
 			return c.global.cmpProjects(toComplete)
 		}
@@ -1098,7 +1099,7 @@ func (c *cmdProjectInfo) Run(cmd *cobra.Command, args []string) error {
 	resource := resources[0]
 
 	if resource.name == "" {
-		return fmt.Errorf(i18n.G("Missing project name"))
+		return errors.New(i18n.G("Missing project name"))
 	}
 
 	if c.flagShowAccess {

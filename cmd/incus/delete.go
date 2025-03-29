@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"slices"
@@ -36,7 +37,7 @@ func (c *cmdDelete) Command() *cobra.Command {
 	cmd.Flags().BoolVarP(&c.flagForce, "force", "f", false, i18n.G("Force the removal of running instances"))
 	cmd.Flags().BoolVarP(&c.flagInteractive, "interactive", "i", false, i18n.G("Require user confirmation"))
 
-	cmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	cmd.ValidArgsFunction = func(_ *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return c.global.cmpInstances(toComplete)
 	}
 
@@ -50,7 +51,7 @@ func (c *cmdDelete) promptDelete(name string) error {
 	input = strings.TrimSuffix(input, "\n")
 
 	if !slices.Contains([]string{i18n.G("yes")}, strings.ToLower(input)) {
-		return fmt.Errorf(i18n.G("User aborted delete operation"))
+		return errors.New(i18n.G("User aborted delete operation"))
 	}
 
 	return nil
@@ -106,7 +107,7 @@ func (c *cmdDelete) Run(cmd *cobra.Command, args []string) error {
 
 		if ct.StatusCode != 0 && ct.StatusCode != api.Stopped {
 			if !c.flagForce {
-				return fmt.Errorf(i18n.G("The instance is currently running, stop it first or pass --force"))
+				return errors.New(i18n.G("The instance is currently running, stop it first or pass --force"))
 			}
 
 			req := api.InstanceStatePut{
