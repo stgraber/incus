@@ -6791,6 +6791,15 @@ func (d *qemu) updateMemoryLimit(newLimit string) error {
 			return fmt.Errorf("Memory hotplug feature is disabled")
 		}
 
+		_, maxMem, _, err := monitor.MemoryConfiguration()
+		if err != nil {
+			return err
+		}
+
+		if newSizeBytes > maxMem {
+			return fmt.Errorf("Requested memory total of %s exceeds instance current maximum of %s, restart required", units.GetByteSizeStringIEC(newSizeBytes, 2), units.GetByteSizeStringIEC(maxMem, 2))
+		}
+
 		return d.hotplugMemory(monitor, newSizeBytes-curSizeBytes)
 	}
 
@@ -10254,7 +10263,7 @@ func (d *qemu) setCPUs(monitor *qmp.Monitor, count int) error {
 	if count > totalReservedCPUs {
 		// Cannot allocate more CPUs than the system provides.
 		if count > len(cpus) {
-			return errors.New("Cannot allocate more CPUs than available")
+			return fmt.Errorf("Requested CPU count of %d exceeds instance current maximum of %d, restart required", count, len(cpus))
 		}
 
 		// This shouldn't trigger, but if it does, don't panic.
