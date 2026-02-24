@@ -2696,9 +2696,17 @@ func (d *qemu) deviceDetachBlockDevice(deviceName string, rawConfig deviceConfig
 	deviceID := fmt.Sprintf("%s%s", qemuDeviceIDPrefix, escapedDeviceName)
 	blockDevName := d.blockNodeName(escapedDeviceName)
 
-	err = monitor.RemoveFDFromFDSet(blockDevName)
+	blockDevs, err := d.fetchBlockDeviceChain(monitor, blockDevName)
 	if err != nil {
 		return err
+	}
+
+	for i := len(blockDevs); i > 0; i-- {
+		blockDev := blockDevs[i-1]
+		err = monitor.RemoveFDFromFDSet(blockDev)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = monitor.RemoveDevice(deviceID)
@@ -2714,10 +2722,22 @@ func (d *qemu) deviceDetachBlockDevice(deviceName string, rawConfig deviceConfig
 		}
 	}
 
+	for i := len(blockDevs); i > 0; i-- {
+		blockDev := blockDevs[i-1]
+		err = d.detachBlockDeviceAndWait(monitor, blockDev)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (d *qemu) detachBlockDeviceAndWait(m *qmp.Monitor, blockDevName string) error {
 	waitDuration := time.Duration(time.Second * time.Duration(10))
 	waitUntil := time.Now().Add(waitDuration)
 	for {
-		err = monitor.RemoveBlockDevice(blockDevName)
+		err := m.RemoveBlockDevice(blockDevName)
 		if err == nil {
 			break
 		}
@@ -7702,7 +7722,7 @@ func (d *qemu) migrateSendLive(ctx context.Context, pool storagePools.Pool, clus
 	}
 
 	// Selects all block devices related to this instance (backing, root disk, overlays).
-	blockDevs, err := d.fetchQcow2Blockdevs(monitor)
+	blockDevs, err := d.fetchRootBlockDeviceChain(monitor)
 	if err != nil {
 		return err
 	}
@@ -10650,7 +10670,7 @@ func (d *qemu) CreateQcow2Snapshot(snapshotName string, backingFilename string) 
 	defer func() { _ = f.Close() }()
 
 	// Select all block devices related to a qcow2 backing chain.
-	blockDevs, err := d.fetchQcow2Blockdevs(monitor)
+	blockDevs, err := d.fetchRootBlockDeviceChain(monitor)
 	if err != nil {
 		return err
 	}
@@ -10705,14 +10725,21 @@ func (d *qemu) CreateQcow2Snapshot(snapshotName string, backingFilename string) 
 	return nil
 }
 
-// fetchQcow2Blockdevs selects block devices related to a qcow2 backing chain.
-func (d *qemu) fetchQcow2Blockdevs(m *qmp.Monitor) ([]string, error) {
+// fetchBlockDeviceChain returns the ordered list of block device names
+// required to load a volume, including any dependent layers.
+func (d *qemu) fetchBlockDeviceChain(m *qmp.Monitor, blockDevName string) ([]string, error) {
 	// Fetch information about block devices.
 	blockdevNames, err := m.QueryNamedBlockNodes()
 	if err != nil {
 		return nil, fmt.Errorf("Failed fetching block nodes names: %w", err)
 	}
 
+	return filterAndSortQcow2Blockdevs(blockdevNames, blockDevName), nil
+}
+
+// fetchRootBlockDeviceChain returns the ordered list of block device names
+// required to load the root disk device, including any dependent layers.
+func (d *qemu) fetchRootBlockDeviceChain(m *qmp.Monitor) ([]string, error) {
 	rootDevName, _, err := internalInstance.GetRootDiskDevice(d.expandedDevices.CloneNative())
 	if err != nil {
 		return nil, fmt.Errorf("Failed getting instance root disk: %w", err)
@@ -10721,7 +10748,7 @@ func (d *qemu) fetchQcow2Blockdevs(m *qmp.Monitor) ([]string, error) {
 	escapedDeviceName := linux.PathNameEncode(rootDevName)
 	rootNodeName := d.blockNodeName(escapedDeviceName)
 
-	return filterAndSortQcow2Blockdevs(blockdevNames, rootNodeName), nil
+	return d.fetchBlockDeviceChain(m, rootNodeName)
 }
 
 // DeleteQcow2Snapshot deletes a qcow2 snapshot for a running instance.
@@ -10732,7 +10759,7 @@ func (d *qemu) DeleteQcow2Snapshot(snapshotIndex int, backingFilename string) er
 	}
 
 	// Select all block devices related to a qcow2 backing chain.
-	blockDevs, err := d.fetchQcow2Blockdevs(monitor)
+	blockDevs, err := d.fetchRootBlockDeviceChain(monitor)
 	if err != nil {
 		return err
 	}
@@ -10816,7 +10843,7 @@ func (d *qemu) ExportQcow2Block(blockIndex int) (func(), string, error) {
 	}
 
 	// Selects all block devices related to this instance (backing, root disk, overlays).
-	blockDevs, err := d.fetchQcow2Blockdevs(monitor)
+	blockDevs, err := d.fetchRootBlockDeviceChain(monitor)
 	if err != nil {
 		return nil, "", err
 	}
