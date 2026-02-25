@@ -326,6 +326,11 @@ func imgPostInstanceInfo(ctx context.Context, s *state.State, r *http.Request, r
 	var rootfsWriter io.Writer
 
 	if req.CompressionAlgorithm != "" {
+		err := validate.IsCompressionAlgorithm(req.CompressionAlgorithm)
+		if err != nil {
+			return nil, err
+		}
+
 		compress = req.CompressionAlgorithm
 	} else {
 		var p *api.Project
@@ -1239,6 +1244,21 @@ func imagesPost(d *Daemon, r *http.Request) response.Response {
 				cleanup(builddir, nil)
 				return resp
 			}
+		}
+	}
+
+	// Check if the project allows retrieving the image.
+	if !imageUpload && (req.Source.Type == "image" || req.Source.Type == "url") {
+		err = s.DB.Cluster.Transaction(r.Context(), func(ctx context.Context, tx *db.ClusterTx) error {
+			err := projectutils.AllowImageCreation(tx, projectName, req)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		})
+		if err != nil {
+			return response.SmartError(err)
 		}
 	}
 

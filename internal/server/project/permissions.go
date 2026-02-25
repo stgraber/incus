@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -49,6 +50,33 @@ func HiddenStoragePools(ctx context.Context, tx *db.ClusterTx, projectName strin
 	return hiddenPools, nil
 }
 
+// AllowImageCreation returns an error if any project-specific restriction is violated when creating a new image.
+func AllowImageCreation(tx *db.ClusterTx, projectName string, req api.ImagesPost) error {
+	info, err := fetchProject(tx, projectName, true)
+	if err != nil {
+		return err
+	}
+
+	if info == nil {
+		return nil
+	}
+
+	// Check if we have image server restrictions.
+	if util.IsTrue(info.Project.Config["restricted"]) && req.Source.Type == "image" && info.Project.Config["restricted.images.servers"] != "" {
+		u, err := url.Parse(req.Source.Server)
+		if err != nil {
+			return err
+		}
+
+		servers := util.SplitNTrimSpace(info.Project.Config["restricted.images.servers"], ",", -1, false)
+		if !slices.Contains(servers, u.Host) {
+			return fmt.Errorf("Image server %q isn't allowed in this project", u.Host)
+		}
+	}
+
+	return nil
+}
+
 // AllowInstanceCreation returns an error if any project-specific limit or
 // restriction is violated when creating a new instance.
 func AllowInstanceCreation(tx *db.ClusterTx, projectName string, req api.InstancesPost) error {
@@ -73,6 +101,26 @@ func AllowInstanceCreation(tx *db.ClusterTx, projectName string, req api.Instanc
 
 	if req.Profiles == nil {
 		req.Profiles = []string{"default"}
+	}
+
+	if util.IsTrue(info.Project.Config["restricted"]) {
+		// Restricted projects aren't allowed to use pull migration.
+		if req.Source.Type == "migration" && req.Source.Mode == "pull" {
+			return errors.New("Restricted projects aren't allowed to use pull mode migration")
+		}
+
+		// Check if we have image server restrictions.
+		if req.Source.Type == "image" && info.Project.Config["restricted.images.servers"] != "" {
+			u, err := url.Parse(req.Source.Server)
+			if err != nil {
+				return err
+			}
+
+			servers := util.SplitNTrimSpace(info.Project.Config["restricted.images.servers"], ",", -1, false)
+			if !slices.Contains(servers, u.Host) {
+				return fmt.Errorf("Image server %q isn't allowed in this project", u.Host)
+			}
+		}
 	}
 
 	err = checkInstanceCountLimit(info, instanceType)
@@ -263,6 +311,11 @@ func AllowVolumeCreation(tx *db.ClusterTx, projectName string, poolName string, 
 
 	if info == nil {
 		return nil
+	}
+
+	// Restricted projects aren't allowed to use pull migration.
+	if util.IsTrue(info.Project.Config["restricted"]) && req.Source.Type == "migration" && req.Source.Mode == "pull" {
+		return errors.New("Restricted projects aren't allowed to use pull mode migration")
 	}
 
 	// If "limits.disk" is not set, there's nothing to do.
@@ -857,6 +910,7 @@ var allRestrictions = map[string]string{
 	"restricted.devices.disk.paths":        "",
 	"restricted.idmap.uid":                 "",
 	"restricted.idmap.gid":                 "",
+	"restricted.images.servers":            "",
 	"restricted.networks.access":           "",
 	"restricted.snapshots":                 "block",
 }
