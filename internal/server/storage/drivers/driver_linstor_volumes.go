@@ -385,7 +385,7 @@ func (d *linstor) CreateVolume(vol Volume, filler *VolumeFiller, op *operations.
 		return nil
 	}, op)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	rev.Success()
