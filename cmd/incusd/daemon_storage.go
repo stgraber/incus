@@ -10,6 +10,8 @@ import (
 
 	"github.com/lxc/incus/v6/internal/rsync"
 	"github.com/lxc/incus/v6/internal/server/db"
+	"github.com/lxc/incus/v6/internal/server/instance"
+	"github.com/lxc/incus/v6/internal/server/instance/instancetype"
 	"github.com/lxc/incus/v6/internal/server/node"
 	"github.com/lxc/incus/v6/internal/server/project"
 	"github.com/lxc/incus/v6/internal/server/state"
@@ -17,11 +19,13 @@ import (
 	storageDrivers "github.com/lxc/incus/v6/internal/server/storage/drivers"
 	internalUtil "github.com/lxc/incus/v6/internal/util"
 	"github.com/lxc/incus/v6/shared/api"
+	"github.com/lxc/incus/v6/shared/util"
 )
 
 func daemonStorageVolumesUnmount(s *state.State) error {
 	var storageBackups string
 	var storageImages string
+	var storageLogs string
 
 	err := s.DB.Node.Transaction(context.Background(), func(ctx context.Context, tx *db.NodeTx) error {
 		nodeConfig, err := node.ConfigLoad(ctx, tx)
@@ -31,6 +35,7 @@ func daemonStorageVolumesUnmount(s *state.State) error {
 
 		storageBackups = nodeConfig.StorageBackupsVolume()
 		storageImages = nodeConfig.StorageImagesVolume()
+		storageLogs = nodeConfig.StorageLogsVolume()
 
 		return nil
 	})
@@ -73,12 +78,21 @@ func daemonStorageVolumesUnmount(s *state.State) error {
 		}
 	}
 
+	if storageLogs != "" {
+		err := unmount("logs", storageLogs)
+		if err != nil {
+			return fmt.Errorf("Failed to unmount logs storage: %w", err)
+		}
+	}
+
 	return nil
 }
 
 func daemonStorageMount(s *state.State) error {
 	var storageBackups string
 	var storageImages string
+	var storageLogs string
+
 	err := s.DB.Node.Transaction(context.Background(), func(ctx context.Context, tx *db.NodeTx) error {
 		nodeConfig, err := node.ConfigLoad(ctx, tx)
 		if err != nil {
@@ -87,6 +101,7 @@ func daemonStorageMount(s *state.State) error {
 
 		storageBackups = nodeConfig.StorageBackupsVolume()
 		storageImages = nodeConfig.StorageImagesVolume()
+		storageLogs = nodeConfig.StorageLogsVolume()
 
 		return nil
 	})
@@ -138,6 +153,13 @@ func daemonStorageMount(s *state.State) error {
 		}
 	}
 
+	if storageLogs != "" {
+		err := mount("logs", storageLogs)
+		if err != nil {
+			return fmt.Errorf("Failed to mount logs storage: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -153,7 +175,7 @@ func daemonStorageSplitVolume(volume string) (string, string, error) {
 	return poolName, volumeName, nil
 }
 
-func daemonStorageValidate(s *state.State, target string) error {
+func daemonStorageValidate(s *state.State, storageType string, target string) error {
 	// Check syntax.
 	if target == "" {
 		return nil
@@ -199,6 +221,20 @@ func daemonStorageValidate(s *state.State, target string) error {
 		return errors.New("Storage volumes for use by Incus itself cannot have snapshots")
 	}
 
+	// If logs, ensure no running instances.
+	if storageType == "logs" {
+		localInstances, err := instance.LoadNodeAll(s, instancetype.Any)
+		if err != nil {
+			return fmt.Errorf("Failed loading local instance list: %w", err)
+		}
+
+		for _, inst := range localInstances {
+			if inst.IsRunning() {
+				return fmt.Errorf("`storage.logs_volume` cannot be changed if there are running instances")
+			}
+		}
+	}
+
 	pool, err := storagePools.LoadByName(s, poolName)
 	if err != nil {
 		return err
@@ -241,13 +277,21 @@ func daemonStorageValidate(s *state.State, target string) error {
 }
 
 func daemonStorageMove(s *state.State, storageType string, target string) error {
-	destPath := internalUtil.VarPath(storageType)
+	var destPath string
+
+	isLogs := storageType == "logs"
+	if isLogs && target == "" {
+		// We keep the default location if the storage logs volume is not set.
+		destPath = internalUtil.LogPath()
+	} else {
+		destPath = internalUtil.VarPath(storageType)
+	}
 
 	// Track down the current storage.
 	var sourcePool string
 	var sourceVolume string
 
-	sourcePath, err := os.Readlink(destPath)
+	sourcePath, err := os.Readlink(internalUtil.VarPath(storageType))
 	if err != nil {
 		sourcePath = destPath
 	} else {
@@ -279,6 +323,36 @@ func daemonStorageMove(s *state.State, storageType string, target string) error 
 		return nil
 	}
 
+	// We should not move all data away from /var/log/incus and move it into the volume as that would interfere
+	// with /var/log/incus/incusd.log which is created prior to us setting up volume mounts
+	moveInstanceDirs := func(source string, target string) error {
+		entries, err := os.ReadDir(source)
+		if err != nil {
+			return err
+		}
+
+		for _, entry := range entries {
+			if !entry.IsDir() {
+				continue
+			}
+
+			src := filepath.Join(source, entry.Name())
+			dst := filepath.Join(target, entry.Name())
+
+			_, err := rsync.LocalCopy(src, dst, "", false)
+			if err != nil {
+				return err
+			}
+
+			err = os.RemoveAll(src)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+
 	// Deal with unsetting.
 	if target == "" {
 		// Things already look correct.
@@ -287,21 +361,29 @@ func daemonStorageMove(s *state.State, storageType string, target string) error 
 		}
 
 		// Remove the symlink.
-		err = os.Remove(destPath)
+		err = os.Remove(internalUtil.VarPath(storageType))
 		if err != nil {
 			return fmt.Errorf("Failed to delete storage symlink at %q: %w", destPath, err)
 		}
 
 		// Re-create as a directory.
+		// In the context of Logs, we ensure system log dir exists and move instance dirs back there
 		err = os.MkdirAll(destPath, 0o700)
 		if err != nil {
 			return fmt.Errorf("Failed to create directory %q: %w", destPath, err)
 		}
 
-		// Move the data across.
-		err = moveContent(sourcePath, destPath)
-		if err != nil {
-			return fmt.Errorf("Failed to move data over to directory %q: %w", destPath, err)
+		if isLogs {
+			err = moveInstanceDirs(sourcePath, destPath)
+			if err != nil {
+				return fmt.Errorf("Failed to move instance logs back to %q: %w", destPath, err)
+			}
+		} else {
+			// Move the data across.
+			err = moveContent(sourcePath, destPath)
+			if err != nil {
+				return fmt.Errorf("Failed to move data over to directory %q: %w", destPath, err)
+			}
 		}
 
 		pool, err := storagePools.LoadByName(s, sourcePool)
@@ -366,9 +448,16 @@ func daemonStorageMove(s *state.State, storageType string, target string) error 
 		}
 
 		// Move the data across.
-		err = moveContent(sourcePath, destPath)
-		if err != nil {
-			return fmt.Errorf("Failed to move data over to directory %q: %w", destPath, err)
+		if isLogs {
+			err = moveInstanceDirs(sourcePath, destPath)
+			if err != nil {
+				return fmt.Errorf("Failed to move data over to directory %q: %w", destPath, err)
+			}
+		} else {
+			err = moveContent(sourcePath, destPath)
+			if err != nil {
+				return fmt.Errorf("Failed to move data over to directory %q: %w", destPath, err)
+			}
 		}
 
 		pool, err := storagePools.LoadByName(s, sourcePool)
@@ -386,12 +475,16 @@ func daemonStorageMove(s *state.State, storageType string, target string) error 
 		return nil
 	}
 
-	sourcePath = internalUtil.VarPath(storageType) + ".temp"
-
 	// Rename the existing storage.
-	err = os.Rename(internalUtil.VarPath(storageType), sourcePath)
-	if err != nil {
-		return fmt.Errorf("Failed to rename existing storage %q: %w", internalUtil.VarPath(storageType), err)
+	if util.PathExists(internalUtil.VarPath(storageType)) {
+		sourcePath = internalUtil.VarPath(storageType) + ".temp"
+
+		err = os.Rename(internalUtil.VarPath(storageType), sourcePath)
+		if err != nil {
+			return fmt.Errorf("Failed to rename existing storage %q: %w", internalUtil.VarPath(storageType), err)
+		}
+	} else if isLogs {
+		sourcePath = internalUtil.LogPath()
 	}
 
 	// Create the new symlink.
@@ -401,15 +494,24 @@ func daemonStorageMove(s *state.State, storageType string, target string) error 
 	}
 
 	// Move the data across.
-	err = moveContent(sourcePath, destPath)
-	if err != nil {
-		return fmt.Errorf("Failed to move data over to directory %q: %w", destPath, err)
+	if isLogs {
+		err = moveInstanceDirs(sourcePath, destPath)
+		if err != nil {
+			return fmt.Errorf("Failed to move data over to directory %q: %w", destPath, err)
+		}
+	} else {
+		err = moveContent(sourcePath, destPath)
+		if err != nil {
+			return fmt.Errorf("Failed to move data over to directory %q: %w", destPath, err)
+		}
 	}
 
 	// Remove the old data.
-	err = os.RemoveAll(sourcePath)
-	if err != nil {
-		return fmt.Errorf("Failed to cleanup old directory %q: %w", sourcePath, err)
+	if sourcePath != internalUtil.LogPath() {
+		err = os.RemoveAll(sourcePath)
+		if err != nil {
+			return fmt.Errorf("Failed to cleanup old directory %q: %w", sourcePath, err)
+		}
 	}
 
 	return nil
