@@ -2965,7 +2965,8 @@ func (d *lxc) Start(stateful bool) error {
 		"forkstart",
 		name,
 		d.state.OS.LxcPath,
-		configPath)
+		configPath,
+		d.LogPath())
 	if err != nil && !d.IsRunning() {
 		// Attempt to extract the LXC errors
 		lxcLog := ""
