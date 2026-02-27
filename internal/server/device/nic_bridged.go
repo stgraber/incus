@@ -1498,7 +1498,13 @@ func (d *nicBridged) setFilters() (err error) {
 	var aclNames []string
 	if config["security.acls"] != "" {
 		aclNames = util.SplitNTrimSpace(config["security.acls"], ",", -1, false)
-		aclRules, err = acl.FirewallACLRules(d.state, d.name, d.inst.Project().Name, d.config)
+
+		networkProjectName, _, err := project.NetworkProject(d.state.DB.Cluster, d.inst.Project().Name)
+		if err != nil {
+			return err
+		}
+
+		aclRules, err = acl.FirewallACLRules(d.state, d.name, networkProjectName, d.config)
 		if err != nil {
 			return err
 		}
