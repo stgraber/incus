@@ -1,0 +1,119 @@
+before:
+  hooks:
+    - go mod download
+    - go mod vendor
+    - git show-ref HEAD | cut -d' ' -f1 > .gitref
+    - git clone --depth=1 https://github.com/cowsql/cowsql vendor/cowsql
+    - cd vendor/cowsql && git show-ref HEAD | cut -d' ' -f1 > .gitref
+    - git clone --depth=1 https://github.com/cowsql/raft vendor/raft
+    - cd vendor/raft && git show-ref HEAD | cut -d' ' -f1 > .gitref
+    - make doc
+
+builds:
+ - main: ./cmd/fuidshift
+   env:
+    - CGO_ENABLED=0
+   goos:
+    - linux
+   goarch:
+    - amd64
+    - arm64
+
+ - main: ./cmd/incus
+   env:
+    - CGO_ENABLED=0
+   goos:
+    - darwin
+    - freebsd
+    - linux
+    - windows
+   goarch:
+    - amd64
+    - arm64
+
+ - main: ./cmd/incus-agent
+   env:
+    - CGO_ENABLED=0
+   goos:
+    - darwin
+    - freebsd
+    - linux
+    - windows
+   goarch:
+    - amd64
+    - arm64
+
+ - main: ./cmd/incus-benchmark
+   env:
+    - CGO_ENABLED=0
+   goos:
+    - darwin
+    - freebsd
+    - linux
+    - windows
+   goarch:
+    - amd64
+    - arm64
+
+ - main: ./cmd/incus-migrate
+   env:
+    - CGO_ENABLED=0
+   goos:
+    - linux
+   goarch:
+    - amd64
+    - arm64
+
+ - main: ./cmd/incus-simplestreams
+   env:
+    - CGO_ENABLED=0
+   goos:
+    - darwin
+    - freebsd
+    - linux
+    - windows
+   goarch:
+    - amd64
+    - arm64
+
+ - main: ./cmd/lxd-to-incus
+   env:
+    - CGO_ENABLED=0
+   goos:
+    - linux
+   goarch:
+    - amd64
+    - arm64
+
+checksum:
+  name_template: "checksums.txt"
+
+gomod:
+  proxy: true
+  mod: mod
+
+milestones:
+  - repo:
+      owner: stgraber
+      name: incus
+    close: true
+    fail_on_error: false
+    name_template: "incus-{{ .Env.INCUS_VERSION }}"
+
+release:
+  github:
+    owner: stgraber
+    name: incus
+
+sboms:
+  - artifacts: any
+    disable: false
+
+source:
+  - enabled: true
+    format: "tar.xz"
+    prefix_template: "{{ .ProjectName }}-{{ .Env.INCUS_VERSION }}/"
+    files:
+      - ".gitref"
+      - "doc/html"
+      - "vendor/*"
