@@ -151,7 +151,7 @@ gomod:
 
 milestones:
   - repo:
-      owner: lxc
+      owner: stgraber
       name: incus
     close: true
     fail_on_error: false
@@ -159,7 +159,7 @@ milestones:
 
 release:
   github:
-    owner: lxc
+    owner: stgraber
     name: incus
   name_template: "Incus {{ .Env.INCUS_VERSION }}"
   extra_files:
