@@ -131,7 +131,13 @@ func (h *remoteProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Serve the UI from a local directory when configured.
 	if h.uiDir != "" {
 		if r.URL.Path == "/ui" {
-			http.Redirect(w, r, "/ui/", http.StatusMovedPermanently)
+			// Keep the token as the cookie may not be sent on an externally initiated redirect.
+			target := "/ui/"
+			if r.URL.RawQuery != "" {
+				target += "?" + r.URL.RawQuery
+			}
+
+			http.Redirect(w, r, target, http.StatusMovedPermanently)
 			return
 		}
 
