@@ -1244,9 +1244,19 @@ func SnapshotToProtobuf(snap *api.InstanceSnapshot) *migration.Snapshot {
 	archID, _ := osarch.ArchitectureID(snap.Architecture)
 	arch := int32(archID)
 	stateful := snap.Stateful
-	creationDate := snap.CreatedAt.UTC().Unix()
-	lastUsedDate := snap.LastUsedAt.UTC().Unix()
-	expiryDate := snap.ExpiresAt.UTC().Unix()
+	// Zero times are sent as 0 (unset).
+	var creationDate, lastUsedDate, expiryDate int64
+	if !snap.CreatedAt.IsZero() {
+		creationDate = snap.CreatedAt.Unix()
+	}
+
+	if !snap.LastUsedAt.IsZero() {
+		lastUsedDate = snap.LastUsedAt.Unix()
+	}
+
+	if !snap.ExpiresAt.IsZero() {
+		expiryDate = snap.ExpiresAt.Unix()
+	}
 
 	return &migration.Snapshot{
 		Name:         &snap.Name,
@@ -1309,16 +1319,17 @@ func SnapshotProtobufToInstanceArgs(s *state.State, inst Instance, snap *migrati
 		Project:      inst.Project().Name,
 	}
 
-	if snap.GetCreationDate() != 0 {
-		args.CreationDate = time.Unix(snap.GetCreationDate(), 0)
+	// Older servers send zero times as negative timestamps.
+	if snap.GetCreationDate() > 0 {
+		args.CreationDate = time.Unix(snap.GetCreationDate(), 0).UTC()
 	}
 
-	if snap.GetLastUsedDate() != 0 {
-		args.LastUsedDate = time.Unix(snap.GetLastUsedDate(), 0)
+	if snap.GetLastUsedDate() > 0 {
+		args.LastUsedDate = time.Unix(snap.GetLastUsedDate(), 0).UTC()
 	}
 
-	if snap.GetExpiryDate() != 0 {
-		args.ExpiryDate = time.Unix(snap.GetExpiryDate(), 0)
+	if snap.GetExpiryDate() > 0 {
+		args.ExpiryDate = time.Unix(snap.GetExpiryDate(), 0).UTC()
 	}
 
 	return &args, nil
