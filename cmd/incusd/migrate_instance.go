@@ -110,12 +110,12 @@ func (s *migrationSourceWs) do(migrateOp *operations.Operation) error {
 	stateConnFunc := func(ctx context.Context) (io.ReadWriteCloser, error) {
 		conn := s.conns[api.SecretNameState]
 		if conn == nil {
-			return nil, errors.New("Migration source control connection not initialized")
+			return nil, errors.New("Migration source state connection not initialized")
 		}
 
 		wsConn, err := conn.WebsocketIO(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("Failed getting migration source control connection: %w", err)
+			return nil, fmt.Errorf("Failed getting migration source state connection: %w", err)
 		}
 
 		return wsConn, nil
@@ -124,7 +124,7 @@ func (s *migrationSourceWs) do(migrateOp *operations.Operation) error {
 	stateConnExtraFunc := func(ctx context.Context, count int) ([]io.ReadWriteCloser, error) {
 		conn := s.conns[api.SecretNameState]
 		if conn == nil {
-			return nil, errors.New("Migration source control connection not initialized")
+			return nil, errors.New("Migration source state connection not initialized")
 		}
 
 		return conn.ExtraWebsocketIO(ctx, count)
@@ -262,12 +262,12 @@ func (c *migrationSink) do(instOp *operationlock.InstanceOperation) error {
 	stateConnFunc := func(ctx context.Context) (io.ReadWriteCloser, error) {
 		conn := c.conns[api.SecretNameState]
 		if conn == nil {
-			return nil, errors.New("Migration target control connection not initialized")
+			return nil, errors.New("Migration target state connection not initialized")
 		}
 
 		wsConn, err := conn.WebsocketIO(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("Failed getting migration target control connection: %w", err)
+			return nil, fmt.Errorf("Failed getting migration target state connection: %w", err)
 		}
 
 		return wsConn, nil
@@ -279,7 +279,7 @@ func (c *migrationSink) do(instOp *operationlock.InstanceOperation) error {
 		stateConnExtraFunc = func(ctx context.Context, count int) ([]io.ReadWriteCloser, error) {
 			conn := c.conns[api.SecretNameState]
 			if conn == nil {
-				return nil, errors.New("Migration target control connection not initialized")
+				return nil, errors.New("Migration target state connection not initialized")
 			}
 
 			return conn.ExtraWebsocketIO(ctx, count)
