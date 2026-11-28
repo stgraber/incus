@@ -1717,18 +1717,12 @@ func (d *Daemon) init() error {
 	// Setup tertiary listeners that may use managed network addresses and must be started after networks.
 	metricsAddress := d.localConfig.MetricsAddress()
 	if metricsAddress != "" {
-		err = d.endpoints.UpMetrics(metricsAddress)
-		if err != nil {
-			return err
-		}
+		d.endpoints.UpMetrics(metricsAddress)
 	}
 
 	storageBucketsAddress := d.localConfig.StorageBucketsAddress()
 	if storageBucketsAddress != "" {
-		err = d.endpoints.UpStorageBuckets(storageBucketsAddress)
-		if err != nil {
-			return err
-		}
+		d.endpoints.UpStorageBuckets(storageBucketsAddress)
 	}
 
 	// Load instance placement scriptlet.

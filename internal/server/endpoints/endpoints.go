@@ -257,15 +257,9 @@ func (e *Endpoints) up(config *Config) error {
 				e.serve(cluster)
 			}
 		} else if networkAddressErr != nil {
-			logger.Error("Cannot currently listen on https socket, re-trying once in 30s...", logger.Ctx{"err": networkAddressErr})
-
-			go func() {
-				time.Sleep(30 * time.Second)
-				err := e.NetworkUpdateAddress(config.NetworkAddress)
-				if err != nil {
-					logger.Error("Still unable to listen on https socket", logger.Ctx{"err": err})
-				}
-			}()
+			retryListener("https", networkAddressErr, func() error {
+				return e.NetworkUpdateAddress(config.NetworkAddress)
+			})
 		}
 	}
 
@@ -296,12 +290,15 @@ func (e *Endpoints) up(config *Config) error {
 	}
 
 	if config.DebugAddress != "" {
-		e.listeners[pprof], err = pprofCreateListener(config.DebugAddress)
+		listener, err := pprofCreateListener(config.DebugAddress)
 		if err != nil {
-			return err
+			retryListener("debug", err, func() error {
+				return e.PprofUpdateAddress(config.DebugAddress)
+			})
+		} else {
+			e.listeners[pprof] = listener
+			e.serve(pprof)
 		}
-
-		e.serve(pprof)
 	}
 
 	for kind := range e.listeners {
@@ -312,29 +309,53 @@ func (e *Endpoints) up(config *Config) error {
 }
 
 // UpMetrics brings up metrics listener on specified address.
-func (e *Endpoints) UpMetrics(listenAddress string) error {
-	var err error
-	e.listeners[metrics], err = metricsCreateListener(listenAddress, e.cert)
+func (e *Endpoints) UpMetrics(listenAddress string) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	listener, err := metricsCreateListener(listenAddress, e.cert)
 	if err != nil {
-		return fmt.Errorf("Failed starting metrics listener: %w", err)
+		retryListener("metrics", err, func() error {
+			return e.MetricsUpdateAddress(listenAddress, e.NetworkCert())
+		})
+
+		return
 	}
 
+	e.listeners[metrics] = listener
 	e.serve(metrics)
-
-	return nil
 }
 
-// UpStorageBuckets brings up storage buvkets listener on specified address.
-func (e *Endpoints) UpStorageBuckets(listenAddress string) error {
-	var err error
-	e.listeners[storageBuckets], err = storageBucketsCreateListener(listenAddress, e.cert)
+// UpStorageBuckets brings up storage buckets listener on specified address.
+func (e *Endpoints) UpStorageBuckets(listenAddress string) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	listener, err := storageBucketsCreateListener(listenAddress, e.cert)
 	if err != nil {
-		return fmt.Errorf("Failed starting storage buckets listener: %w", err)
+		retryListener("storage buckets", err, func() error {
+			return e.StorageBucketsUpdateAddress(listenAddress, e.NetworkCert())
+		})
+
+		return
 	}
 
+	e.listeners[storageBuckets] = listener
 	e.serve(storageBuckets)
+}
 
-	return nil
+// retryListener logs a non-fatal listener failure and retries it once in the background.
+func retryListener(name string, err error, retry func() error) {
+	logger.Error("Cannot currently listen on "+name+" socket, re-trying once in 30s...", logger.Ctx{"err": err})
+
+	go func() {
+		time.Sleep(30 * time.Second)
+
+		err := retry()
+		if err != nil {
+			logger.Error("Still unable to listen on "+name+" socket", logger.Ctx{"err": err})
+		}
+	}()
 }
 
 // Down brings down all endpoints and stops serving HTTP requests.
