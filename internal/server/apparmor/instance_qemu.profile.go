@@ -90,6 +90,9 @@ profile "{{ .name }}" flags=(attach_disconnected,mediate_deleted) {
   {{ .path }}/** rwk,
   {{ .imageMetadataPath }}/** rwk,
   {{ .devicesPath }}/** rwk,
+{{- if .customVolumesPath }}
+  {{ .customVolumesPath }}/** rwk,
+{{- end }}
   /tmp/incus_screenshot_{{ .id }} rwk,
 
   # Needed for the fork sub-commands

@@ -277,6 +277,13 @@ func instanceProfile(sysOS *sys.OS, inst instance, extraBinaries []string) (stri
 			}
 		}
 
+		// The kernel checks file descriptors handed to QEMU against its profile when the daemon is itself
+		// confined, so allow the custom volumes that disk devices are backed by.
+		customVolumesPath := ""
+		if sysOS.AppArmorStacked {
+			customVolumesPath = filepath.Join(varPath, "storage-pools", "*", "custom")
+		}
+
 		// Detect whether any GPU device uses virtio-gpu DRM native context, which
 		// needs the QEMU process to access the host DRM render nodes directly.
 		gpuNativeContext := false
@@ -288,6 +295,7 @@ func instanceProfile(sysOS *sys.OS, inst instance, extraBinaries []string) (stri
 		}
 
 		err = qemuProfileTpl.Execute(sb, map[string]any{
+			"customVolumesPath": customVolumesPath,
 			"devicesPath":       inst.DevicesPath(),
 			"gpuNativeContext":  gpuNativeContext,
 			"exePath":           execPath,
