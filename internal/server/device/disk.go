@@ -171,6 +171,9 @@ type disk struct {
 
 	// io.bus can contain imprecise information about the actual bus being used.
 	bus string
+
+	// Reverts the dependent volume changes made by Add.
+	dependentRevert func() error
 }
 
 // CanMigrate returns whether the device can be migrated to any other cluster member.
@@ -1150,10 +1153,12 @@ func (d *disk) Add() error {
 	if d.config["pool"] != "" && d.config["source"] != "" {
 		// During migration, the storage volume may not be present at this moment,
 		// so do not raise an error.
-		_, err := d.updateDependentConfig()
+		cleanup, err := d.updateDependentConfig()
 		if err != nil && !response.IsNotFoundError(err) {
 			return err
 		}
+
+		d.dependentRevert = cleanup
 	}
 
 	return nil
@@ -3718,6 +3723,11 @@ func (d *disk) Remove(cleanupDependencies bool) error {
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("Failed removing %s file: %w", diskSourceCloudInit, err)
 		}
+	}
+
+	// Undo our own Add, this also removes the volume snapshots it created.
+	if d.dependentRevert != nil && cleanupDependencies {
+		return d.dependentRevert()
 	}
 
 	if d.config["pool"] != "" && d.config["source"] != "" && util.IsTrue(d.config["dependent"]) && cleanupDependencies {
