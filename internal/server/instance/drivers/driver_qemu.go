@@ -231,7 +231,7 @@ func qemuInstantiate(s *state.State, args db.InstanceArgs, expandedDevices devic
 	}
 
 	// Cleanup the zero values.
-	if d.expiryDate.IsZero() {
+	if d.expiryDate.Unix() <= 0 {
 		d.expiryDate = time.Time{}
 	}
 
@@ -290,7 +290,7 @@ func qemuCreate(s *state.State, args db.InstanceArgs, p api.Project, partialDevi
 	}
 
 	// Cleanup the zero values.
-	if d.expiryDate.IsZero() {
+	if d.expiryDate.Unix() <= 0 {
 		d.expiryDate = time.Time{}
 	}
 

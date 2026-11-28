@@ -277,7 +277,7 @@ func lxcCreate(s *state.State, args db.InstanceArgs, p api.Project, partialDevic
 	}
 
 	// Cleanup the zero values
-	if d.expiryDate.IsZero() {
+	if d.expiryDate.Unix() <= 0 {
 		d.expiryDate = time.Time{}
 	}
 
@@ -493,7 +493,7 @@ func lxcInstantiate(s *state.State, args db.InstanceArgs, expandedDevices device
 	}
 
 	// Cleanup the zero values
-	if d.expiryDate.IsZero() {
+	if d.expiryDate.Unix() <= 0 {
 		d.expiryDate = time.Time{}
 	}
 
