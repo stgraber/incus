@@ -97,10 +97,12 @@ func (e *Endpoints) StorageBucketsUpdateAddress(address string, cert *localtls.C
 		listener, err := getListener(address)
 		if err != nil {
 			// Attempt to revert to the previous address
-			listener, err1 := getListener(oldAddress)
-			if err1 == nil {
-				e.listeners[storageBuckets] = *listener
-				e.serve(storageBuckets)
+			if oldAddress != "" {
+				listener, err1 := getListener(oldAddress)
+				if err1 == nil {
+					e.listeners[storageBuckets] = *listener
+					e.serve(storageBuckets)
+				}
 			}
 
 			return err

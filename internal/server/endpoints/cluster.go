@@ -82,10 +82,12 @@ func (e *Endpoints) ClusterUpdateAddress(address string) error {
 	listener, err := getListener(address)
 	if err != nil {
 		// Attempt to revert to the previous address
-		listener, err1 := getListener(oldAddress)
-		if err1 == nil {
-			e.listeners[cluster] = listeners.NewFancyTLSListener(*listener, e.cert)
-			e.serve(cluster)
+		if oldAddress != "" {
+			listener, err1 := getListener(oldAddress)
+			if err1 == nil {
+				e.listeners[cluster] = listeners.NewFancyTLSListener(*listener, e.cert)
+				e.serve(cluster)
+			}
 		}
 
 		return err

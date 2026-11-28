@@ -95,10 +95,12 @@ func (e *Endpoints) MetricsUpdateAddress(address string, cert *localtls.CertInfo
 	listener, err := getListener(address)
 	if err != nil {
 		// Attempt to revert to the previous address
-		listener, err1 := getListener(oldAddress)
-		if err1 == nil {
-			e.listeners[metrics] = *listener
-			e.serve(metrics)
+		if oldAddress != "" {
+			listener, err1 := getListener(oldAddress)
+			if err1 == nil {
+				e.listeners[metrics] = *listener
+				e.serve(metrics)
+			}
 		}
 
 		return err

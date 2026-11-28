@@ -92,10 +92,12 @@ func (e *Endpoints) PprofUpdateAddress(address string) error {
 		listener, err := getListener(address)
 		if err != nil {
 			// Attempt to revert to the previous address
-			listener, err1 := getListener(oldAddress)
-			if err1 == nil {
-				e.listeners[pprof] = *listener
-				e.serve(pprof)
+			if oldAddress != "" {
+				listener, err1 := getListener(oldAddress)
+				if err1 == nil {
+					e.listeners[pprof] = *listener
+					e.serve(pprof)
+				}
 			}
 
 			return err
