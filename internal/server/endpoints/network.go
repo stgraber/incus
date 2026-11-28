@@ -61,6 +61,8 @@ func (e *Endpoints) NetworkUpdateAddress(address string) error {
 		address = internalUtil.CanonicalNetworkAddress(address, ports.HTTPSDefaultPort)
 	}
 
+	e.cancelRetry(network)
+
 	oldAddress := e.NetworkAddress()
 	if address == oldAddress {
 		return nil

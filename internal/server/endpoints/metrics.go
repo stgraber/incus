@@ -52,6 +52,8 @@ func (e *Endpoints) MetricsUpdateAddress(address string, cert *localtls.CertInfo
 		address = internalUtil.CanonicalNetworkAddress(address, ports.HTTPSMetricsDefaultPort)
 	}
 
+	e.cancelRetry(metrics)
+
 	oldAddress := e.MetricsAddress()
 	if address == oldAddress {
 		return nil

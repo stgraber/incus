@@ -48,6 +48,8 @@ func (e *Endpoints) PprofUpdateAddress(address string) error {
 		address = internalUtil.CanonicalNetworkAddress(address, ports.HTTPDebugDefaultPort)
 	}
 
+	e.cancelRetry(pprof)
+
 	oldAddress := e.PprofAddress()
 	if address == oldAddress {
 		return nil

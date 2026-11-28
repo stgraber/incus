@@ -162,6 +162,7 @@ type Endpoints struct {
 	servers   map[kind]*http.Server // HTTP servers by endpoint type.
 	cert      *localtls.CertInfo    // Keypair and CA to use for TLS.
 	inherited map[kind]bool         // Store whether the listener came through socket activation
+	retries   map[kind]string       // Addresses with a pending background retry
 
 	systemdListenFDsStart int // First socket activation FD, for tests.
 }
@@ -184,6 +185,7 @@ func (e *Endpoints) up(config *Config) error {
 
 	e.cert = config.Cert
 	e.inherited = map[kind]bool{}
+	e.retries = map[kind]string{}
 
 	var err error
 
@@ -255,7 +257,7 @@ func (e *Endpoints) up(config *Config) error {
 				}
 			}
 		} else if networkAddressErr != nil {
-			retryListener("https", networkAddressErr, func() error {
+			e.retryListener(network, config.NetworkAddress, networkAddressErr, func() error {
 				return e.NetworkUpdateAddress(config.NetworkAddress)
 			})
 		}
@@ -288,7 +290,7 @@ func (e *Endpoints) up(config *Config) error {
 	if config.DebugAddress != "" {
 		listener, err := pprofCreateListener(config.DebugAddress)
 		if err != nil {
-			retryListener("debug", err, func() error {
+			e.retryListener(pprof, config.DebugAddress, err, func() error {
 				return e.PprofUpdateAddress(config.DebugAddress)
 			})
 		} else {
@@ -310,7 +312,7 @@ func (e *Endpoints) UpMetrics(listenAddress string) {
 
 	listener, err := metricsCreateListener(listenAddress, e.cert)
 	if err != nil {
-		retryListener("metrics", err, func() error {
+		e.retryListener(metrics, listenAddress, err, func() error {
 			return e.MetricsUpdateAddress(listenAddress, e.NetworkCert())
 		})
 
@@ -328,7 +330,7 @@ func (e *Endpoints) UpStorageBuckets(listenAddress string) {
 
 	listener, err := storageBucketsCreateListener(listenAddress, e.cert)
 	if err != nil {
-		retryListener("storage buckets", err, func() error {
+		e.retryListener(storageBuckets, listenAddress, err, func() error {
 			return e.StorageBucketsUpdateAddress(listenAddress, e.NetworkCert())
 		})
 
@@ -340,17 +342,37 @@ func (e *Endpoints) UpStorageBuckets(listenAddress string) {
 }
 
 // retryListener logs a non-fatal listener failure and retries it once in the background.
-func retryListener(name string, err error, retry func() error) {
-	logger.Error("Cannot currently listen on "+name+" socket, re-trying once in 30s...", logger.Ctx{"err": err})
+// The caller must hold e.mu.
+func (e *Endpoints) retryListener(kind kind, address string, err error, retry func() error) {
+	logger.Error("Cannot currently listen on socket, re-trying once in 30s...", logger.Ctx{"type": kind.String(), "address": address, "err": err})
+
+	e.retries[kind] = address
 
 	go func() {
 		time.Sleep(30 * time.Second)
 
+		// Skip the retry if the address was changed in the meantime.
+		e.mu.Lock()
+		pending, ok := e.retries[kind]
+		delete(e.retries, kind)
+		e.mu.Unlock()
+
+		if !ok || pending != address {
+			return
+		}
+
 		err := retry()
 		if err != nil {
-			logger.Error("Still unable to listen on "+name+" socket", logger.Ctx{"err": err})
+			logger.Error("Still unable to listen on socket", logger.Ctx{"type": kind.String(), "address": address, "err": err})
 		}
 	}()
+}
+
+// cancelRetry drops any pending background retry for the listener.
+func (e *Endpoints) cancelRetry(kind kind) {
+	e.mu.Lock()
+	delete(e.retries, kind)
+	e.mu.Unlock()
 }
 
 // Down brings down all endpoints and stops serving HTTP requests.

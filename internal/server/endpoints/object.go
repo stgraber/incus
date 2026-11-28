@@ -53,6 +53,8 @@ func (e *Endpoints) StorageBucketsUpdateAddress(address string, cert *localtls.C
 		address = internalUtil.CanonicalNetworkAddress(address, ports.HTTPSStorageBucketsDefaultPort)
 	}
 
+	e.cancelRetry(storageBuckets)
+
 	oldAddress := e.StorageBucketsAddress()
 	if address == oldAddress {
 		return nil
