@@ -10221,6 +10221,11 @@ func (d *lxc) SwitchQcow2Snapshots(switches []instance.Qcow2SnapshotSwitch) erro
 	return instance.ErrNotImplemented
 }
 
+// RedirectDiskWrites puts temporary overlays on top of disks. Not supported by containers.
+func (d *lxc) RedirectDiskWrites(devNames []string) (func(), error) {
+	return nil, instance.ErrNotImplemented
+}
+
 // ExportQcow2Block exports a qcow2 block device. Not supported by containers.
 func (d *lxc) ExportQcow2Block(diskName string, diskIndex int) (func(), string, error) {
 	return nil, "", instance.ErrNotImplemented
