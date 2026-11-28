@@ -253,8 +253,6 @@ func (e *Endpoints) up(config *Config) error {
 
 					return networkAddressErr
 				}
-
-				e.serve(cluster)
 			}
 		} else if networkAddressErr != nil {
 			retryListener("https", networkAddressErr, func() error {
@@ -285,8 +283,6 @@ func (e *Endpoints) up(config *Config) error {
 
 			return err
 		}
-
-		e.serve(cluster)
 	}
 
 	if config.DebugAddress != "" {
@@ -297,7 +293,6 @@ func (e *Endpoints) up(config *Config) error {
 			})
 		} else {
 			e.listeners[pprof] = listener
-			e.serve(pprof)
 		}
 	}
 
