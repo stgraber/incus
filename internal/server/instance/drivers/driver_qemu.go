@@ -64,6 +64,7 @@ import (
 	"github.com/lxc/incus/v7/internal/server/instance/instancetype"
 	"github.com/lxc/incus/v7/internal/server/instance/operationlock"
 	"github.com/lxc/incus/v7/internal/server/lifecycle"
+	"github.com/lxc/incus/v7/internal/server/locking"
 	"github.com/lxc/incus/v7/internal/server/metrics"
 	localMigration "github.com/lxc/incus/v7/internal/server/migration"
 	"github.com/lxc/incus/v7/internal/server/mirror"
@@ -999,6 +1000,9 @@ func (d *qemu) runStopHook(target string, reason string) error {
 
 	// A guest stopping during its own live migration aborts it, let the transfer clean up first.
 	d.liveMigrationAbort()
+
+	// Let temporary disk overlays be merged back before QEMU goes away.
+	d.diskOverlaysWait()
 
 	// If QEMU is still running, stop it (handles reboot).
 	monitor, err := qmp.Connect(d.monitorPath(), qemuSerialChardevName, nil, d.QMPLogFilePath(), qemuDetachDisk(d.state, d.id))
@@ -7937,6 +7941,9 @@ func (d *qemu) Stop(stateful bool) error {
 			return err
 		}
 	} else {
+		// Let temporary disk overlays be merged back before QEMU goes away.
+		d.diskOverlaysWait()
+
 		// Request the VM stop immediately.
 		err = monitor.Quit()
 		if err != nil {
@@ -9915,6 +9922,9 @@ func (d *qemu) MigrateSend(args instance.MigrateSendArgs) error {
 	if args.Live {
 		defer d.waitStopHook()
 		defer d.liveMigrationDone(d.liveMigrationTrack(cancelMigrate))
+
+		// Both use the same overlays, let an ongoing snapshot finish first.
+		d.diskOverlaysWait()
 	}
 
 	// Wait for essential migration connections before negotiation.
@@ -10545,6 +10555,159 @@ func (d *qemu) mergeEphemeralSnapshot(monitor *qmp.Monitor, overlayNode string) 
 	}
 
 	return nil
+}
+
+// diskOverlaysLockName returns the name of the lock held while disks sit behind temporary overlays.
+func (d *qemu) diskOverlaysLockName() string {
+	return fmt.Sprintf("instance_disk_overlays_%s", project.Instance(d.Project().Name, d.Name()))
+}
+
+// diskOverlaysWait waits for the temporary disk overlays of an ongoing snapshot to be merged back.
+func (d *qemu) diskOverlaysWait() {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	unlock, err := locking.Lock(ctx, d.diskOverlaysLockName())
+	if err != nil {
+		d.logger.Error("Timed out waiting for temporary disk overlays to be merged")
+		return
+	}
+
+	unlock()
+}
+
+// RedirectDiskWrites puts a temporary overlay on top of the given disks in a single transaction,
+// so their volumes all stop changing at the same point in time without pausing the guest.
+// The returned function merges the guest's writes back into the disks.
+// ErrNotImplemented is returned when one of the disks can't be handled that way.
+func (d *qemu) RedirectDiskWrites(devNames []string) (func(), error) {
+	monitor, err := d.qmpConnect()
+	if err != nil {
+		return nil, err
+	}
+
+	reverter := revert.New()
+	defer reverter.Fail()
+
+	// Keep the instance from stopping or migrating until the overlays are merged back.
+	unlock, err := locking.Lock(context.TODO(), d.diskOverlaysLockName())
+	if err != nil {
+		return nil, err
+	}
+
+	reverter.Add(func() { unlock() })
+
+	// Live migration uses the same overlays.
+	qemuLiveMigrationsMu.Lock()
+	_, migrating := qemuLiveMigrations[project.Instance(d.Project().Name, d.Name())]
+	qemuLiveMigrationsMu.Unlock()
+
+	if migrating {
+		return nil, instance.ErrNotImplemented
+	}
+
+	nodes, err := monitor.QueryNamedBlockNodes()
+	if err != nil {
+		return nil, err
+	}
+
+	diskNames := make([]string, 0, len(devNames))
+	diskSizes := make([]int64, 0, len(devNames))
+
+	for _, devName := range devNames {
+		diskName := d.blockNodeName(linux.PathNameEncode(devName))
+
+		// Disks without a block node (filesystem shares) can't get an overlay.
+		blockDevs := filterAndSortQcow2Blockdevs(nodes, diskName)
+		if len(blockDevs) == 0 {
+			return nil, instance.ErrNotImplemented
+		}
+
+		// The overlay is already in use (NBD export or failed merge).
+		if slices.Contains(nodes, ephemeralSnapshotName(diskName)) {
+			return nil, instance.ErrNotImplemented
+		}
+
+		blockDevName := blockDevs[len(blockDevs)-1]
+
+		// QEMU turns persistent bitmaps read-only when their disk gets an overlay, making the
+		// later merge fail.
+		bitmaps, err := monitor.BlockNodeDirtyBitmaps(blockDevName)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, bitmap := range bitmaps {
+			if bitmap.Persistent {
+				return nil, instance.ErrNotImplemented
+			}
+		}
+
+		diskSize, err := monitor.BlockNodeSize(blockDevName)
+		if err != nil {
+			return nil, err
+		}
+
+		diskNames = append(diskNames, diskName)
+		diskSizes = append(diskSizes, diskSize)
+	}
+
+	// Keep QEMU around if the guest shuts down so the overlays can be merged back.
+	err = monitor.SetAction(map[string]string{"shutdown": "pause"})
+	if err != nil {
+		return nil, err
+	}
+
+	restoreAction := func() {
+		err := monitor.SetAction(map[string]string{"shutdown": "poweroff"})
+		if err != nil {
+			d.logger.Warn("Failed restoring the shutdown action", logger.Ctx{"err": err})
+		}
+	}
+
+	reverter.Add(restoreAction)
+
+	snapshotDir, err := d.ephemeralSnapshotDir()
+	if err != nil {
+		return nil, err
+	}
+
+	overlays := make([]string, 0, len(diskNames))
+	actions := make([]qmp.TransactionAction, 0, len(diskNames))
+
+	for i, diskName := range diskNames {
+		overlayNode, baseNode, removeOverlay, err := d.prepareEphemeralSnapshot(monitor, diskName, diskSizes[i], false, snapshotDir)
+		if err != nil {
+			return nil, err
+		}
+
+		reverter.Add(removeOverlay)
+
+		overlays = append(overlays, overlayNode)
+		actions = append(actions, qmp.TransactionAction{
+			Type: "blockdev-snapshot",
+			Data: map[string]any{"node": baseNode, "overlay": overlayNode},
+		})
+	}
+
+	err = monitor.RunTransaction(actions)
+	if err != nil {
+		return nil, fmt.Errorf("Failed redirecting disk writes: %w", err)
+	}
+
+	merge := func() {
+		// Failures are logged by the merge, the overlay then stays as it holds the guest's writes.
+		for _, overlayNode := range overlays {
+			_ = d.mergeEphemeralSnapshot(monitor, overlayNode)
+		}
+
+		restoreAction()
+		unlock()
+	}
+
+	reverter.Success()
+
+	return merge, nil
 }
 
 // removeEphemeralOverlay tears down a copy-before-write overlay, cancelling its backup job first.
