@@ -116,6 +116,7 @@ type Instance interface {
 	RenameQcow2Snapshot(devName string, snapshotIndex int, backingFilename string) error
 	PrepareQcow2Snapshot(diskPath string, devName string) (Qcow2SnapshotSwitch, revert.Hook, error)
 	SwitchQcow2Snapshots(switches []Qcow2SnapshotSwitch) error
+	RedirectDiskWrites(devNames []string) (func(), error)
 	ExportQcow2Block(diskName string, blockIndex int) (func(), string, error)
 	ConnectNBD(diskName string, diskSize int64, writable bool) (net.Conn, func(), error)
 	ConnectNBDAllDisks(reuse bool) (net.Conn, func(), error)
