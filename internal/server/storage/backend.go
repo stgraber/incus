@@ -3883,6 +3883,36 @@ func (b *backend) CreateInstanceSnapshot(inst instance.Instance, src instance.In
 		freeze = false
 	}
 
+	// QEMU can also redirect the writes of a running VM to temporary overlays for the duration of the snapshot.
+	// This avoids the pause and gets all disks snapshotted at the same point in time.
+	if batch == nil && src.Type() == instancetype.VM && src.IsRunning() && !src.IsFrozen() && !inst.IsStateful() {
+		rootDiskName, _, err := internalInstance.GetRootDiskDevice(src.ExpandedDevices().CloneNative())
+		if err != nil {
+			return err
+		}
+
+		devNames := []string{rootDiskName}
+		_ = src.ForEachDependentDiskType(func(dev deviceConfig.DeviceNamed) error {
+			devNames = append(devNames, dev.Name)
+			return nil
+		})
+
+		if freeze || len(devNames) > 1 {
+			mergeWrites, err := src.RedirectDiskWrites(devNames)
+			if err == nil {
+				// Runs before the reverter so the disks are whole again before any snapshot is removed.
+				defer mergeWrites()
+
+				// Attempt to sync the config filesystem.
+				_ = linux.SyncFS(src.RootfsPath())
+
+				freeze = false
+			} else if !errors.Is(err, instance.ErrNotImplemented) {
+				l.Warn("Failed redirecting disk writes, pausing the instance instead", logger.Ctx{"err": err})
+			}
+		}
+	}
+
 	if freeze {
 		// Freeze the processes.
 		err = src.Freeze()
