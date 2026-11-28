@@ -10200,7 +10200,11 @@ func (d *qemu) MigrateSend(args instance.MigrateSendArgs) error {
 	var stateConn io.ReadWriteCloser
 	var stateConnExtra []io.ReadWriteCloser
 	if args.Live && respHeader.Criu != nil && *respHeader.Criu == migration.CRIUType_VM_QEMU {
-		stateConn, err = args.StateConn(connectionsCtx)
+		// Negotiation can take a while on a busy server, so the state connections get their own timeout.
+		stateCtx, stateCancel := context.WithTimeout(context.Background(), time.Second*10)
+		defer stateCancel()
+
+		stateConn, err = args.StateConn(stateCtx)
 		if err != nil {
 			op.Done(err)
 			return err
@@ -10216,7 +10220,7 @@ func (d *qemu) MigrateSend(args instance.MigrateSendArgs) error {
 				return err
 			}
 
-			stateConnExtra, err = args.StateConnExtra(connectionsCtx, int(channels))
+			stateConnExtra, err = args.StateConnExtra(stateCtx, int(channels))
 			if err != nil {
 				op.Done(err)
 				return err
@@ -11564,13 +11568,17 @@ func (d *qemu) MigrateReceive(args instance.MigrateReceiveArgs) error {
 	var stateConn io.ReadWriteCloser
 	var stateConnExtra []io.ReadWriteCloser
 	if args.Live && useStateConn {
-		stateConn, err = args.StateConn(connectionsCtx)
+		// Negotiation can take a while on a busy server, so the state connections get their own timeout.
+		stateCtx, stateCancel := context.WithTimeout(context.Background(), time.Second*10)
+		defer stateCancel()
+
+		stateConn, err = args.StateConn(stateCtx)
 		if err != nil {
 			return err
 		}
 
 		if channels > 0 {
-			stateConnExtra, err = args.StateConnExtra(connectionsCtx, int(channels))
+			stateConnExtra, err = args.StateConnExtra(stateCtx, int(channels))
 			if err != nil {
 				return err
 			}
