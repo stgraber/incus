@@ -816,7 +816,7 @@ func (d *ceph) DeleteVolume(vol Volume, op *operations.Operation) error {
 
 // hasVolume indicates whether a specific RBD volume exists on the storage pool.
 func (d *ceph) hasVolume(rbdVolumeName string) (bool, error) {
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.TODO(), 30*time.Second)
 	defer cancel()
 
 	_, err := subprocess.RunCommandContext(
