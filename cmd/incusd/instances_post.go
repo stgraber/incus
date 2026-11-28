@@ -692,8 +692,9 @@ func createFromCopy(ctx context.Context, s *state.State, r *http.Request, projec
 		return response.SmartError(err)
 	}
 
-	// If "security.secureboot" has changed, force an NVRAM reset (VMs only).
-	if source.Type() == instancetype.VM && util.IsTrueOrEmpty(source.ExpandedConfig()["security.secureboot"]) != util.IsTrueOrEmpty(req.Config["security.secureboot"]) {
+	// If "security.secureboot" is overridden with a new value, force an NVRAM reset (VMs only).
+	secureBoot, ok := req.Config["security.secureboot"]
+	if ok && source.Type() == instancetype.VM && util.IsTrueOrEmpty(source.ExpandedConfig()["security.secureboot"]) != util.IsTrueOrEmpty(secureBoot) {
 		req.Config["volatile.apply_nvram"] = "true"
 	}
 
